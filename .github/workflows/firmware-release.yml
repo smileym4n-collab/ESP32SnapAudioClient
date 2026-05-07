@@ -68,7 +68,6 @@ jobs:
           cp .pio/build/*/bootloader.bin "release/ESP32AudioClient-v${VERSION}-bootloader.bin" || true
           cp .pio/build/*/partitions.bin "release/ESP32AudioClient-v${VERSION}-partitions.bin" || true
           cp RELEASE-NOTES.md "release/ESP32AudioClient-v${VERSION}-release-notes.md" || true
-          cp CHANGELOG.md "release/ESP32AudioClient-v${VERSION}-CHANGELOG.md" || true
 
       - name: Upload firmware to GitHub Release
         uses: softprops/action-gh-release@v3

@@ -8,6 +8,7 @@
 - Added Wi-Fi startup retry handling after connection failure.
 - Added serial Wi-Fi failure diagnostics showing the configured SSID, connection status, scan count, whether the target SSID is visible, and best RSSI when found.
 - Changed release firmware builds to require Wi-Fi credentials from GitHub Actions secrets instead of silently compiling the placeholder example credentials.
+- Removed the changelog file from GitHub release artifacts; release summaries now live in `RELEASE-NOTES.md`.
 
 ## [1.0.0] - 2026-05-07
 
