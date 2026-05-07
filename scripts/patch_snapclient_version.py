@@ -5,12 +5,9 @@ Import("env")
 
 
 def firmware_version():
-    config_path = Path(env.subst("$PROJECT_DIR")) / "include" / "snapclient_config.h"
-    text = config_path.read_text(encoding="utf-8")
-    match = re.search(r'FIRMWARE_VERSION\[\]\s*=\s*"([^"]+)"', text)
-    if not match:
-        raise RuntimeError("FIRMWARE_VERSION not found in include/snapclient_config.h")
-    return match.group(1)
+    version_path = Path(env.subst("$PROJECT_DIR")) / "VERSION"
+    version = version_path.read_text(encoding="utf-8").strip()
+    return version[1:] if version.startswith("v") else version
 
 
 def patch_snapclient_version(source=None, target=None, env=None):

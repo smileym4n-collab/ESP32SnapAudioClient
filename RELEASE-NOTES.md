@@ -1,4 +1,4 @@
-# Release Notes - ESP32 Audio Client v0.14.0
+# Release Notes - ESP32 Audio Client v1.0.0
 
 Release date: 2026-05-07
 
@@ -82,13 +82,21 @@ Hardware notes:
 
 ## Firmware Version
 
-- Previous version: `0.13.4`
-- New version: `0.14.0`
+- Previous version: `0.14.0`
+- New version: `1.0.0`
 
 Visible firmware version fields:
 
-- `version`: `0.14.0`
-- `firmwareVersion`: `0.14.0`
+- `version`: `1.0.0`
+- `firmwareVersion`: `1.0.0`
+
+Versioning policy:
+
+- Small releases increment patch versions, for example `v1.0.x`.
+- Medium releases increment minor versions and reset patch, for example `v1.x.0`.
+- Large releases increment major versions and reset minor/patch, for example `vx.0.0`.
+- `VERSION` stores the canonical version without the leading `v`; release tags include the leading `v`.
+- `CHANGELOG.md` and `RELEASE-NOTES.md` must stay aligned with firmware version and release behavior changes.
 
 ## OTA Update Workflow
 
@@ -98,7 +106,7 @@ After this release is running on the ESP32:
 
 1. Build future firmware with PlatformIO.
 2. Use the generated file:
-   `C:\audio-firmware-lab\esp32\snapclient\.pio\build\esp32-wrover-ie-n16r8\firmware.bin`
+   `C:\ESPAudioClient\.pio\build\esp32-wrover-ie-n16r8\firmware.bin`
 3. Upload that file from SnapControl to:
    `POST http://<esp-ip>:8080/api/firmware`
 4. Wait for the ESP32 to reboot.
@@ -159,15 +167,15 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `0.14.0` build output size is comfortably below the OTA slot limit:
+The current `1.0.0` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
 - Built firmware image: about `1911141` bytes
 
 ## Manual Test Checklist
 
-- Flash `0.14.0` by USB.
-- Confirm `GET /api/status` reports `firmwareVersion` as `0.14.0`.
+- Flash `1.0.0` by USB.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.0.0`.
 - Confirm `ota_supported` is `true`.
 - Confirm `capabilities.firmware_update` is `true`.
 - Confirm normal Snapclient audio behavior still works.

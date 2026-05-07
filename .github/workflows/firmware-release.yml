@@ -27,16 +27,23 @@ jobs:
       - name: Create CI secrets file
         run: cp include/secrets.example.h include/secrets.h
 
+      - name: Check tag matches firmware version
+        run: |
+          VERSION="$(cat VERSION)"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          test "$VERSION" = "$TAG_VERSION"
+
       - name: Build firmware
         run: pio run
 
       - name: Prepare release files
         run: |
+          VERSION="$(cat VERSION)"
           mkdir release
-          cp .pio/build/*/firmware.bin release/
-          cp .pio/build/*/bootloader.bin release/ || true
-          cp .pio/build/*/partitions.bin release/ || true
-          cp RELEASENOTES.md release/ || true
+          cp .pio/build/*/firmware.bin "release/ESP32AudioClient-v${VERSION}-firmware.bin"
+          cp .pio/build/*/bootloader.bin "release/ESP32AudioClient-v${VERSION}-bootloader.bin" || true
+          cp .pio/build/*/partitions.bin "release/ESP32AudioClient-v${VERSION}-partitions.bin" || true
+          cp RELEASE-NOTES.md "release/ESP32AudioClient-v${VERSION}-release-notes.md" || true
 
       - name: Upload firmware to GitHub Release
         uses: softprops/action-gh-release@v3

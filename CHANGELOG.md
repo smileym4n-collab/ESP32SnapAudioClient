@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-07
+
+- Promoted the firmware release line to `v1.0.0`.
+- Added a repo-root `VERSION` file as the canonical firmware version source.
+- Injected the firmware version into PlatformIO builds so serial boot logs, `/api/status`, and the Snapserver hello version stay aligned.
+- Added a release workflow check that requires `v*` tags to match `VERSION`.
+- Added agent release guidance for semantic version bumps and release documentation updates.
+
 ## [0.14.0] - 2026-05-07
 
 - Added Snapclient-mode OTA firmware update support through `POST /api/firmware`.
