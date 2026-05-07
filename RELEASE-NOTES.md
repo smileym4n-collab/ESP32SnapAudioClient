@@ -90,12 +90,8 @@ Hardware notes:
 - Kept channel routing, Bluetooth-name control, battery reporting, and existing Snapclient behavior available through the local API.
 - Kept USB flashing as the required recovery path.
 
-## Changes Since v1.0.0
+## Changes Since v1.0.1
 
-- Fixed Snapclient startup behavior so an initial Wi-Fi connection failure no longer causes a reboot loop.
-- Added Wi-Fi startup retry handling after connection failure.
-- Added serial Wi-Fi failure diagnostics showing the configured SSID, connection status, scan count, whether the target SSID is visible, and best RSSI when found.
-- Changed release firmware builds to require Wi-Fi credentials from GitHub Actions secrets instead of silently compiling the placeholder example credentials.
 - Removed Snapclient playback-idle restarts so the device can remain online while no music is playing.
 - Changed the status API `project` field from `ESP32 Audio Client v9.30` to `ESP32 Audio Client`; firmware build numbers remain in `version` and `firmwareVersion`.
 

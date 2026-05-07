@@ -6,6 +6,7 @@
 
 - Removed Snapclient playback-idle restarts so the device no longer reboots when powered on with no audio playing.
 - Changed the reported project name from `ESP32 Audio Client v9.30` to `ESP32 Audio Client`; firmware build numbers remain in `version` and `firmwareVersion`.
+- Changed release notes so the "Changes Since" section only lists changes from the immediately previous firmware version.
 
 ## [1.0.1] - 2026-05-07
 
