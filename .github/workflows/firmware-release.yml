@@ -25,7 +25,7 @@ jobs:
         run: pip install platformio
 
       - name: Create CI secrets file
-        run: cp include/secrets.h include/secrets.h
+        run: cp include/secrets.example.h include/secrets.h
 
       - name: Build firmware
         run: pio run
@@ -36,7 +36,7 @@ jobs:
           cp .pio/build/*/firmware.bin release/
           cp .pio/build/*/bootloader.bin release/ || true
           cp .pio/build/*/partitions.bin release/ || true
-          cp RELEASE-NOTES.md release/ || true
+          cp RELEASENOTES.md release/ || true
 
       - name: Upload firmware to GitHub Release
         uses: softprops/action-gh-release@v3
