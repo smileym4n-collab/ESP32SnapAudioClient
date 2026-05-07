@@ -30,6 +30,9 @@ class SnapclientMode : public RuntimeMode {
 
  private:
   bool connectWifiWithTimeout();
+  bool startSnapclientServices();
+  void handleWifiStartupRetry();
+  void logWifiFailureDiagnostics();
   void beginControlApi();
   void handleControlApi();
   void sendControlStatus();
@@ -69,9 +72,12 @@ class SnapclientMode : public RuntimeMode {
   String otaError_;
   String otaMessage_;
   bool playbackIdleLogged_ = false;
+  bool snapclientStarted_ = false;
+  bool wifiStartupFailed_ = false;
   bool restartPrepared_ = false;
   bool otaUpdateInProgress_ = false;
   bool otaUpdateAccepted_ = false;
   bool otaUpdateFailed_ = false;
   bool otaRebootPending_ = false;
+  uint32_t lastWifiStartupRetryMs_ = 0;
 };

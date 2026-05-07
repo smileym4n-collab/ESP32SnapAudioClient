@@ -25,7 +25,31 @@ jobs:
         run: pip install platformio
 
       - name: Create CI secrets file
-        run: cp include/secrets.example.h include/secrets.h
+        env:
+          SNAP_WIFI_SSID: ${{ secrets.SNAP_WIFI_SSID }}
+          SNAP_WIFI_PASSWORD: ${{ secrets.SNAP_WIFI_PASSWORD }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          ssid = os.environ.get("SNAP_WIFI_SSID", "")
+          password = os.environ.get("SNAP_WIFI_PASSWORD", "")
+          if not ssid or not password:
+              raise SystemExit(
+                  "SNAP_WIFI_SSID and SNAP_WIFI_PASSWORD repository secrets are required for release firmware builds."
+              )
+
+          def c_string(value):
+              return value.replace("\\", "\\\\").replace('"', '\\"')
+
+          Path("include/secrets.h").write_text(
+              "#pragma once\n\n"
+              f'#define SNAP_WIFI_SSID_SECRET "{c_string(ssid)}"\n'
+              f'#define SNAP_WIFI_PASSWORD_SECRET "{c_string(password)}"\n',
+              encoding="utf-8",
+          )
+          PY
 
       - name: Check tag matches firmware version
         run: |
@@ -44,6 +68,7 @@ jobs:
           cp .pio/build/*/bootloader.bin "release/ESP32AudioClient-v${VERSION}-bootloader.bin" || true
           cp .pio/build/*/partitions.bin "release/ESP32AudioClient-v${VERSION}-partitions.bin" || true
           cp RELEASE-NOTES.md "release/ESP32AudioClient-v${VERSION}-release-notes.md" || true
+          cp CHANGELOG.md "release/ESP32AudioClient-v${VERSION}-CHANGELOG.md" || true
 
       - name: Upload firmware to GitHub Release
         uses: softprops/action-gh-release@v3

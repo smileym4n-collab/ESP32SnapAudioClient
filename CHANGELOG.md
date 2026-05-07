@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-07
+
+- Fixed Snapclient startup behavior so an initial Wi-Fi connection failure no longer causes a reboot loop.
+- Added Wi-Fi startup retry handling after connection failure.
+- Added serial Wi-Fi failure diagnostics showing the configured SSID, connection status, scan count, whether the target SSID is visible, and best RSSI when found.
+- Changed release firmware builds to require Wi-Fi credentials from GitHub Actions secrets instead of silently compiling the placeholder example credentials.
+
 ## [1.0.0] - 2026-05-07
 
 - Promoted the firmware release line to `v1.0.0`.

@@ -1,4 +1,4 @@
-# Release Notes - ESP32 Audio Client v1.0.0
+# Release Notes - ESP32 Audio Client v1.0.1
 
 Release date: 2026-05-07
 
@@ -14,6 +14,10 @@ Target hardware:
 This release adds the first OTA-capable firmware for the ESP32 Snapclient build. Install this version over USB once, then future compatible firmware builds can be uploaded from SnapControl over the local network.
 
 The normal audio behavior is intended to remain unchanged from the previous Snapclient PCM build.
+
+This patch also prevents a reboot loop when Snapclient mode cannot connect to Wi-Fi at startup. The device now stays up, retries periodically, and logs whether the configured SSID can be seen.
+
+Release workflow builds now require `SNAP_WIFI_SSID` and `SNAP_WIFI_PASSWORD` GitHub Actions secrets. This prevents published firmware artifacts from accidentally using the placeholder `secrets.example.h` credentials.
 
 ## What This Firmware Does
 
@@ -77,17 +81,20 @@ Hardware notes:
 - Added local OTA firmware upload support in Snapclient mode.
 - Added `POST /api/firmware` for raw PlatformIO `.bin` app-image uploads.
 - Added OTA discovery fields to `GET /api/status`.
+- Added Wi-Fi startup failure diagnostics and retry without reboot.
+- Changed GitHub release firmware builds to require real Wi-Fi credentials from repository secrets.
 - Kept channel routing, Bluetooth-name control, battery reporting, and existing Snapclient behavior available through the local API.
 - Kept USB flashing as the required recovery path.
 
 ## Firmware Version
 
-- New version: `1.0.0`
+- Previous version: `1.0.0`
+- New version: `1.0.1`
 
 Visible firmware version fields:
 
-- `version`: `1.0.0`
-- `firmwareVersion`: `1.0.0`
+- `version`: `1.0.1`
+- `firmwareVersion`: `1.0.1`
 
 Versioning policy:
 
@@ -166,15 +173,17 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `1.0.0` build output size is comfortably below the OTA slot limit:
+The current `1.0.1` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
 - Built firmware image: about `1911141` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.0.0` by USB.
-- Confirm `GET /api/status` reports `firmwareVersion` as `1.0.0`.
+- Flash `1.0.1` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.0.1`.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.0.1` after Wi-Fi connects.
+- Temporarily unavailable Wi-Fi should log diagnostics and retry without a reboot loop.
 - Confirm `ota_supported` is `true`.
 - Confirm `capabilities.firmware_update` is `true`.
 - Confirm normal Snapclient audio behavior still works.

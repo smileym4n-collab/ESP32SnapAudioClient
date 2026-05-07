@@ -1,6 +1,6 @@
 /*
   Project: ESP32 audio client v9.30 (SnapApp channel control API)
-  Version: 1.0.0
+  Version: 1.0.1
   Framework: Arduino (PlatformIO)
 
   Pin map (ESP32-WROVER-IE-N16R8 -> external I2S DAC):

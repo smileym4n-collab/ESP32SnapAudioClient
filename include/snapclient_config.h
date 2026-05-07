@@ -2,18 +2,18 @@
 
 /*
   ESP32 audio client v9.30 configuration.
-  Version: 1.0.0
+  Version: 1.0.1
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
 #include <Arduino.h>
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.0.0"
+#define APP_FIRMWARE_VERSION "1.0.1"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.0.0"
+#define APP_FIRMWARE_VERSION_TAG "v1.0.1"
 #endif
 
 #if __has_include("secrets.h")
@@ -50,6 +50,7 @@ static constexpr char SNAP_WIFI_PASSWORD[] = SNAP_WIFI_PASSWORD_SECRET;
 static constexpr uint32_t SNAP_WIFI_CONNECT_TIMEOUT_MS = 20000;
 static constexpr uint32_t SNAP_WIFI_RETRY_DELAY_MS = 500;
 static constexpr uint32_t SNAP_WIFI_MONITOR_INTERVAL_MS = 1000;
+static constexpr uint32_t SNAP_WIFI_STARTUP_RETRY_INTERVAL_MS = 30000;
 
 // ---------- Local control API ----------
 // Used by companion apps for ESP32-specific controls that Snapserver does not

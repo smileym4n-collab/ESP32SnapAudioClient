@@ -1,6 +1,6 @@
 # ESP32 Audio Client v9.30
 
-Version: **1.0.0**
+Version: **1.0.1**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 
@@ -13,6 +13,7 @@ Default behavior after this change:
 - **MCLK is disabled by default**
 - **Snapclient mode exposes `Stereo`, `Left`, and `Right` channel routing**
 - **Snapclient mode exposes a local OTA firmware upload endpoint for prebuilt `.bin` app images**
+- **Snapclient mode retries Wi-Fi startup failures without rebooting continuously**
 
 That default suits many common **PCM5102-style DAC modules**, which usually do not require a separate MCLK line.
 

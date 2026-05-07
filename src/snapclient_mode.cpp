@@ -91,9 +91,19 @@ bool SnapclientMode::begin() {
 
   if (!connectWifiWithTimeout()) {
     Serial.println("[wifi] failed to connect");
-    return false;
+    logWifiFailureDiagnostics();
+    wifiStartupFailed_ = true;
+    lastWifiStartupRetryMs_ = millis();
+    Serial.printf("[wifi] will retry every %lums without rebooting\n",
+                  static_cast<unsigned long>(
+                      app_config::SNAP_WIFI_STARTUP_RETRY_INTERVAL_MS));
+    return true;
   }
 
+  return startSnapclientServices();
+}
+
+bool SnapclientMode::startSnapclientServices() {
   Serial.print("[wifi] connected, ip=");
   Serial.println(WiFi.localIP());
 
@@ -174,10 +184,18 @@ bool SnapclientMode::begin() {
   Serial.printf("[snapclient] periodic stats=%s\n",
                 app_config::SNAPCLIENT_PERIODIC_STATS_ENABLED ? "on" : "off");
   Serial.println("[snapclient] running");
+  snapclientStarted_ = true;
+  wifiStartupFailed_ = false;
   return true;
 }
 
 void SnapclientMode::loop() {
+  if (!snapclientStarted_) {
+    handleWifiStartupRetry();
+    delay(app_config::MAIN_LOOP_DELAY_MS);
+    return;
+  }
+
   batteryMonitor_.update();
   handleControlApi();
 
@@ -371,6 +389,10 @@ bool SnapclientMode::connectWifiWithTimeout() {
   WiFi.setAutoReconnect(true);
   WiFi.setSleep(false);
   WiFi.setHostname(app_config::SNAP_HOST_NAME);
+  Serial.printf("[wifi] ssid=%s timeout=%lums\n",
+                app_config::SNAP_WIFI_SSID,
+                static_cast<unsigned long>(
+                    app_config::SNAP_WIFI_CONNECT_TIMEOUT_MS));
   WiFi.begin(app_config::SNAP_WIFI_SSID, app_config::SNAP_WIFI_PASSWORD);
 
   const uint32_t startMs = millis();
@@ -382,6 +404,64 @@ bool SnapclientMode::connectWifiWithTimeout() {
 
   Serial.println();
   return WiFi.status() == WL_CONNECTED;
+}
+
+void SnapclientMode::handleWifiStartupRetry() {
+  if (!wifiStartupFailed_) {
+    return;
+  }
+
+  const uint32_t nowMs = millis();
+  if (nowMs - lastWifiStartupRetryMs_ <
+      app_config::SNAP_WIFI_STARTUP_RETRY_INTERVAL_MS) {
+    return;
+  }
+
+  lastWifiStartupRetryMs_ = nowMs;
+  Serial.println("[wifi] retrying startup connection...");
+  if (!connectWifiWithTimeout()) {
+    Serial.println("[wifi] retry failed");
+    logWifiFailureDiagnostics();
+    return;
+  }
+
+  Serial.println("[wifi] retry connected, starting Snapclient services");
+  if (!startSnapclientServices()) {
+    Serial.println("[snapclient] startup after Wi-Fi retry failed, restarting...");
+    delay(app_config::RESTART_DELAY_MS);
+    ESP.restart();
+  }
+}
+
+void SnapclientMode::logWifiFailureDiagnostics() {
+  const wl_status_t status = WiFi.status();
+  Serial.printf("[wifi] status=%d ssid=%s\n",
+                static_cast<int>(status),
+                app_config::SNAP_WIFI_SSID);
+
+  const int networkCount = WiFi.scanNetworks();
+  if (networkCount < 0) {
+    Serial.printf("[wifi] scan failed result=%d\n", networkCount);
+    return;
+  }
+
+  bool targetSeen = false;
+  int bestRssi = -1000;
+  for (int i = 0; i < networkCount; ++i) {
+    if (WiFi.SSID(i) == app_config::SNAP_WIFI_SSID) {
+      targetSeen = true;
+      bestRssi = max(bestRssi, WiFi.RSSI(i));
+    }
+  }
+
+  Serial.printf("[wifi] scan networks=%d target_ssid_seen=%s",
+                networkCount,
+                targetSeen ? "true" : "false");
+  if (targetSeen) {
+    Serial.printf(" best_rssi=%d", bestRssi);
+  }
+  Serial.println();
+  WiFi.scanDelete();
 }
 
 void SnapclientMode::beginControlApi() {
