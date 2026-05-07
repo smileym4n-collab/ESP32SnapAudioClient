@@ -82,7 +82,6 @@ Hardware notes:
 
 ## Firmware Version
 
-- Previous version: `0.14.0`
 - New version: `1.0.0`
 
 Visible firmware version fields:
