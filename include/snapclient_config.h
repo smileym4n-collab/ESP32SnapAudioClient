@@ -1,19 +1,19 @@
 #pragma once
 
 /*
-  ESP32 audio client v9.30 configuration.
-  Version: 1.0.1
+  ESP32 audio client configuration.
+  Version: 1.0.2
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
 #include <Arduino.h>
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.0.1"
+#define APP_FIRMWARE_VERSION "1.0.2"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.0.1"
+#define APP_FIRMWARE_VERSION_TAG "v1.0.2"
 #endif
 
 #if __has_include("secrets.h")
@@ -39,7 +39,7 @@ inline const char *operatingModeName(OperatingMode mode) {
   }
 }
 
-static constexpr char PROJECT_TITLE[] = "ESP32 Audio Client v9.30";
+static constexpr char PROJECT_TITLE[] = "ESP32 Audio Client";
 static constexpr char FIRMWARE_VERSION[] = APP_FIRMWARE_VERSION;
 static constexpr char FIRMWARE_VERSION_TAG[] = APP_FIRMWARE_VERSION_TAG;
 static constexpr char TARGET_MODULE[] = "ESP32-WROVER-IE-N16R8";
@@ -150,9 +150,6 @@ static constexpr int SNAPCLIENT_PROCESSING_LAG_MS = -172;
 // Adjust gently rather than chasing every update.
 static constexpr int SNAPCLIENT_SYNC_INTERVAL = 25;
 static constexpr uint32_t PSRAM_ALLOC_THRESHOLD_BYTES = 4096;
-static constexpr uint32_t SNAP_OUTPUT_IDLE_TIMEOUT_MS = 3000;
-static constexpr uint32_t SNAP_OUTPUT_IDLE_RESTART_MS = 20000;
-
 // ---------- Runtime ----------
 static constexpr uint32_t CPU_FREQ_MHZ = 240;
 static constexpr uint32_t SERIAL_BAUD = 115200;

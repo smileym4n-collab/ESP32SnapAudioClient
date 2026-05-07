@@ -63,7 +63,6 @@ class SnapclientMode : public RuntimeMode {
   TaskHandle_t snapTaskHandle_ = nullptr;
   volatile bool snapTaskRunning_ = false;
   uint32_t lastWifiCheckMs_ = 0;
-  uint32_t playbackIdleSinceMs_ = 0;
   uint32_t otaRestartAtMs_ = 0;
   size_t otaExpectedSize_ = 0;
   size_t otaWritten_ = 0;
@@ -71,7 +70,6 @@ class SnapclientMode : public RuntimeMode {
   int otaResponseStatus_ = 500;
   String otaError_;
   String otaMessage_;
-  bool playbackIdleLogged_ = false;
   bool snapclientStarted_ = false;
   bool wifiStartupFailed_ = false;
   bool restartPrepared_ = false;

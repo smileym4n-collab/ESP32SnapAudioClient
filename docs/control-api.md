@@ -22,9 +22,9 @@ Example response:
 
 ```json
 {
-  "project": "ESP32 Audio Client v9.30",
-  "version": "1.0.1",
-  "firmwareVersion": "1.0.1",
+  "project": "ESP32 Audio Client",
+  "version": "1.0.2",
+  "firmwareVersion": "1.0.2",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,

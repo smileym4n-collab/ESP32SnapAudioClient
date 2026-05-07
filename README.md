@@ -1,6 +1,6 @@
-# ESP32 Audio Client v9.30
+# ESP32 Audio Client
 
-Version: **1.0.1**
+Version: **1.0.2**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 

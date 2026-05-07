@@ -1,4 +1,4 @@
-# Snapserver Notes For ESP32 Audio Client v9
+# Snapserver Notes For ESP32 Audio Client
 
 This project's **Snapclient mode** now expects a **PCM** Snapserver stream on an **ESP32-WROVER-IE-N16R8** target.
 

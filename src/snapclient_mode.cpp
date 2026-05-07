@@ -221,31 +221,6 @@ void SnapclientMode::loop() {
   }
 
   snapProcessor_->logRuntime();
-  if (snapProcessor_->isOutputTimedOut(
-          app_config::SNAP_OUTPUT_IDLE_TIMEOUT_MS)) {
-    if (playbackIdleSinceMs_ == 0) {
-      playbackIdleSinceMs_ = nowMs;
-    }
-
-    if (!playbackIdleLogged_) {
-      Serial.println(
-          "[snapclient] playback idle timeout: decoded PCM is no longer reaching the output task");
-      logDiagnosticSnapshot("idle-timeout");
-      playbackIdleLogged_ = true;
-    }
-
-    if ((nowMs - playbackIdleSinceMs_) >= app_config::SNAP_OUTPUT_IDLE_RESTART_MS) {
-      Serial.println(
-          "[snapclient] playback idle persisted, restarting Snapclient mode");
-      logDiagnosticSnapshot("idle-restart");
-      prepareForRestart();
-      delay(app_config::RESTART_DELAY_MS);
-      ESP.restart();
-    }
-  } else {
-    playbackIdleSinceMs_ = 0;
-    playbackIdleLogged_ = false;
-  }
 
   delay(app_config::MAIN_LOOP_DELAY_MS);
 }
