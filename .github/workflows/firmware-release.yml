@@ -33,8 +33,10 @@ jobs:
           cp .pio/build/*/firmware.bin release/
           cp .pio/build/*/bootloader.bin release/ || true
           cp .pio/build/*/partitions.bin release/ || true
+          cp RELEASE-NOTES.md release/ || true
 
       - name: Upload firmware to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          body_path: RELEASE-NOTES.md
           files: release/*
