@@ -2,18 +2,18 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.0.2
+  Version: 1.0.3
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
 #include <Arduino.h>
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.0.2"
+#define APP_FIRMWARE_VERSION "1.0.3"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.0.2"
+#define APP_FIRMWARE_VERSION_TAG "v1.0.3"
 #endif
 
 #if __has_include("secrets.h")
@@ -93,8 +93,9 @@ static constexpr uint32_t MODE_SWITCH_RESTART_DELAY_MS = 100;
 static constexpr uint32_t MODE_SWITCH_MAGIC = 0x534D4F44;  // "SMOD"
 
 // ---------- Status LED behavior ----------
-// Snapclient mode uses a steady LED.
-// Bluetooth mode uses a simple repeating blink to show the alternate mode clearly.
+// Snapclient blinks while connecting to Wi-Fi and is steady once connected.
+// Bluetooth blinks while waiting for a source and is steady once connected.
+static constexpr uint32_t MODE_LED_WIFI_BLINK_INTERVAL_MS = 250;
 static constexpr uint32_t MODE_LED_BLUETOOTH_BLINK_INTERVAL_MS = 250;
 
 // ---------- Audio format ----------

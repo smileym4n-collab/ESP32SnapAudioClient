@@ -1,6 +1,6 @@
 # ESP32 Audio Client
 
-Version: **1.0.2**
+Version: **1.0.3**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 
@@ -13,6 +13,7 @@ Default behavior after this change:
 - **MCLK is disabled by default**
 - **Snapclient mode exposes `Stereo`, `Left`, and `Right` channel routing**
 - **Snapclient mode exposes a local OTA firmware upload endpoint for prebuilt `.bin` app images**
+- **Snapclient/Wi-Fi LED blinks while connecting and stays solid once connected**
 - **Snapclient mode retries Wi-Fi startup failures without rebooting continuously**
 
 That default suits many common **PCM5102-style DAC modules**, which usually do not require a separate MCLK line.
@@ -121,8 +122,8 @@ If you do not have the button connected yet, you can also switch modes from the 
 
 The status LED behavior is intentionally simple:
 
-- **Snapclient mode**: Wi-Fi LED on `GPIO32` is **solid ON**
-- **Bluetooth mode**: BT LED on `GPIO33` **blinks continuously**
+- **Snapclient mode**: Wi-Fi LED on `GPIO32` **blinks while connecting** and is **solid ON once Wi-Fi is connected**
+- **Bluetooth mode**: BT LED on `GPIO33` **blinks while waiting for a source** and is **solid ON once a Bluetooth client is connected**
 
 The LED logic is implemented in [mode_led_controller.cpp](/C:/ESPAudioClient/src/mode_led_controller.cpp).
 

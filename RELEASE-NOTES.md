@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v1.0.2
+# Release Notes - ESP32 Audio Client v1.0.3
 
-Release date: 2026-05-07
+Release date: 2026-05-08
 
 Target hardware:
 
@@ -20,6 +20,8 @@ This patch also prevents a reboot loop when Snapclient mode cannot connect to Wi
 Release workflow builds now require `SNAP_WIFI_SSID` and `SNAP_WIFI_PASSWORD` GitHub Actions secrets. This prevents published firmware artifacts from accidentally using the placeholder `secrets.example.h` credentials.
 
 This release also removes the Snapclient playback-idle restart behavior. The device may now sit powered on with no active Snapserver playback without rebooting. The project name reported to companion apps is now `ESP32 Audio Client`; build numbers remain available through `version` and `firmwareVersion`.
+
+The Snapclient/Wi-Fi LED now mirrors the Bluetooth waiting behavior: it blinks while connecting to Wi-Fi and stays solid once connected.
 
 ## What This Firmware Does
 
@@ -87,24 +89,24 @@ Hardware notes:
 - Changed GitHub release firmware builds to require real Wi-Fi credentials from repository secrets.
 - Removed playback-idle restarts when no audio is playing.
 - Changed the reported project name to `ESP32 Audio Client` without embedding hardware or firmware version text.
+- Changed the Snapclient/Wi-Fi LED to blink while connecting and stay solid once connected.
 - Kept channel routing, Bluetooth-name control, battery reporting, and existing Snapclient behavior available through the local API.
 - Kept USB flashing as the required recovery path.
 
-## Changes Since v1.0.1
+## Changes Since v1.0.2
 
-- Removed Snapclient playback-idle restarts so the device can remain online while no music is playing.
-- Changed the status API `project` field from `ESP32 Audio Client v9.30` to `ESP32 Audio Client`; firmware build numbers remain in `version` and `firmwareVersion`.
+- Changed Snapclient/Wi-Fi LED behavior so it blinks while connecting to Wi-Fi and stays solid once connected.
 
 ## Firmware Version
 
-- Previous version: `1.0.1`
-- New version: `1.0.2`
+- Previous version: `1.0.2`
+- New version: `1.0.3`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.0.2`
-- `firmwareVersion`: `1.0.2`
+- `version`: `1.0.3`
+- `firmwareVersion`: `1.0.3`
 
 Versioning policy:
 
@@ -183,17 +185,18 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `1.0.2` build output size is comfortably below the OTA slot limit:
+The current `1.0.3` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
 - Built firmware image: about `1911141` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.0.2` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.0.2`.
+- Flash `1.0.3` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.0.3`.
 - Confirm `GET /api/status` reports `project` as `ESP32 Audio Client`.
-- Confirm `GET /api/status` reports `firmwareVersion` as `1.0.2` after Wi-Fi connects.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.0.3` after Wi-Fi connects.
+- Confirm the Wi-Fi LED blinks while connecting and stays solid once connected.
 - Temporarily unavailable Wi-Fi should log diagnostics and retry without a reboot loop.
 - Leaving the device powered on with no active audio should not trigger a playback-idle reboot.
 - Confirm `ota_supported` is `true`.

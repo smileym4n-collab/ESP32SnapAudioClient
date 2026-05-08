@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-08
+
+- Changed Snapclient/Wi-Fi LED behavior so it blinks while connecting to Wi-Fi and stays solid once connected.
+
 ## [1.0.2] - 2026-05-07
 
 - Removed Snapclient playback-idle restarts so the device no longer reboots when powered on with no audio playing.

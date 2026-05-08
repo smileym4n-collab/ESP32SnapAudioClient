@@ -5,6 +5,7 @@
 #include <esp_heap_caps.h>
 
 #include "bluetooth_name_store.h"
+#include "board_config.h"
 #include "channel_mode_store.h"
 #include "project_snap_processor_rtos.h"
 #include "snapclient_config.h"
@@ -12,6 +13,13 @@
 namespace {
 
 constexpr uint8_t kEspImageHeaderMagic = 0xE9;
+
+void writeWifiStatusLed(bool on) {
+  const int level = on
+                        ? (board_config::WIFI_STATUS_LED_ACTIVE_HIGH ? HIGH : LOW)
+                        : (board_config::WIFI_STATUS_LED_ACTIVE_HIGH ? LOW : HIGH);
+  digitalWrite(board_config::WIFI_STATUS_LED_PIN, level);
+}
 
 size_t otaPartitionSize() {
   const esp_partition_t *partition = esp_ota_get_next_update_partition(nullptr);
@@ -84,6 +92,10 @@ SnapclientMode::SnapclientMode()
   codec_.setFormatTarget(pcmProbe_);
 }
 SnapclientMode::~SnapclientMode() = default;
+
+bool SnapclientMode::wifiConnected() const {
+  return WiFi.status() == WL_CONNECTED;
+}
 
 bool SnapclientMode::begin() {
   Serial.println("[mode] starting Snapclient over Wi-Fi");
@@ -371,13 +383,23 @@ bool SnapclientMode::connectWifiWithTimeout() {
   WiFi.begin(app_config::SNAP_WIFI_SSID, app_config::SNAP_WIFI_PASSWORD);
 
   const uint32_t startMs = millis();
+  uint32_t lastLedToggleMs = startMs;
+  bool wifiLedOn = false;
+  writeWifiStatusLed(wifiLedOn);
   while (WiFi.status() != WL_CONNECTED &&
          (millis() - startMs) < app_config::SNAP_WIFI_CONNECT_TIMEOUT_MS) {
     delay(app_config::SNAP_WIFI_RETRY_DELAY_MS);
+    const uint32_t nowMs = millis();
+    if (nowMs - lastLedToggleMs >= app_config::MODE_LED_WIFI_BLINK_INTERVAL_MS) {
+      lastLedToggleMs = nowMs;
+      wifiLedOn = !wifiLedOn;
+      writeWifiStatusLed(wifiLedOn);
+    }
     Serial.print('.');
   }
 
   Serial.println();
+  writeWifiStatusLed(WiFi.status() == WL_CONNECTED);
   return WiFi.status() == WL_CONNECTED;
 }
 

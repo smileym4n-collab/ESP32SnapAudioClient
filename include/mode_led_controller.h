@@ -7,6 +7,7 @@ class ModeLedController {
   void begin();
   void setMode(app_config::OperatingMode mode);
   void setBluetoothClientConnected(bool connected);
+  void setWifiConnected(bool connected);
   void update();
 
  private:
@@ -16,5 +17,7 @@ class ModeLedController {
   app_config::OperatingMode activeMode_ = app_config::OperatingMode::Snapclient;
   uint32_t lastToggleMs_ = 0;
   bool bluetoothClientConnected_ = false;
+  bool wifiConnected_ = false;
+  bool wifiLedOn_ = false;
   bool btLedOn_ = false;
 };

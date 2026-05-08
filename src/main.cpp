@@ -1,6 +1,6 @@
 /*
   Project: ESP32 audio client (SnapApp channel control API)
-  Version: 1.0.2
+  Version: 1.0.3
   Framework: Arduino (PlatformIO)
 
   Pin map (ESP32-WROVER-IE-N16R8 -> external I2S DAC):
@@ -17,8 +17,8 @@
   - Cold boot always starts in Snapclient mode.
   - Press the runtime mode button to reboot into the other mode.
   - Snapclient mode exposes a local HTTP control API on port 8080.
-  - Snapclient mode drives the Wi-Fi LED solid on.
-  - Bluetooth mode blinks the BT LED.
+  - Snapclient mode blinks the Wi-Fi LED while connecting and keeps it solid once connected.
+  - Bluetooth mode blinks the BT LED while waiting for a source.
   - MCLK is optional and disabled by default for PCM5102-style builds.
   - Classic ESP32 MCLK routing is limited to GPIO0/GPIO1/GPIO3 when enabled.
   - Wi-Fi and Snapserver settings are in include/snapclient_config.h.
@@ -78,7 +78,7 @@ void setup() {
                     : static_cast<RuntimeMode *>(&gBluetoothMode);
 
   Serial.printf("[boot] selected mode=%s\n", gActiveMode->name());
-  Serial.printf("[led] wifi=GPIO%d solid in Snapclient, bt=GPIO%d blink in Bluetooth\n",
+  Serial.printf("[led] wifi=GPIO%d blink connecting/solid connected, bt=GPIO%d blink waiting/solid connected\n",
                 board_config::WIFI_STATUS_LED_PIN,
                 board_config::BT_STATUS_LED_PIN);
   Serial.printf("[button] pin=%d, press while running to toggle mode and reboot\n",
@@ -101,6 +101,7 @@ void setup() {
 void loop() {
   if (gActiveMode != nullptr) {
     gModeLed.setBluetoothClientConnected(gActiveMode->bluetoothClientConnected());
+    gModeLed.setWifiConnected(gActiveMode->wifiConnected());
   }
   gModeLed.update();
   gModeSwitch.update();

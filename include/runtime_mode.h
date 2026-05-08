@@ -9,4 +9,5 @@ class RuntimeMode {
   virtual const char *name() const = 0;
   virtual void prepareForRestart() {}
   virtual bool bluetoothClientConnected() const { return false; }
+  virtual bool wifiConnected() const { return true; }
 };
