@@ -1,4 +1,4 @@
-# Release Notes - ESP32 Audio Client v1.0.3
+# Release Notes - ESP32 Audio Client v1.1.0
 
 Release date: 2026-05-08
 
@@ -22,6 +22,8 @@ Release workflow builds now require `SNAP_WIFI_SSID` and `SNAP_WIFI_PASSWORD` Gi
 This release also removes the Snapclient playback-idle restart behavior. The device may now sit powered on with no active Snapserver playback without rebooting. The project name reported to companion apps is now `ESP32 Audio Client`; build numbers remain available through `version` and `firmwareVersion`.
 
 The Snapclient/Wi-Fi LED now mirrors the Bluetooth waiting behavior: it blinks while connecting to Wi-Fi and stays solid once connected.
+
+This release adds a persisted power-source setting for battery-powered and mains-powered devices. Companion apps can now switch a deployed device between `battery` and `mains` over the local API, and `/api/status` reports whether battery UI should be shown.
 
 ## What This Firmware Does
 
@@ -90,23 +92,30 @@ Hardware notes:
 - Removed playback-idle restarts when no audio is playing.
 - Changed the reported project name to `ESP32 Audio Client` without embedding hardware or firmware version text.
 - Changed the Snapclient/Wi-Fi LED to blink while connecting and stay solid once connected.
+- Added a saved `battery` / `mains` power-source setting.
+- Added `power_source` and `capabilities.power_source` to `/api/status`.
+- Added `POST /api/power-source` for companion apps.
+- Suppressed battery voltage/percentage reporting when `power_source` is `mains`.
 - Kept channel routing, Bluetooth-name control, battery reporting, and existing Snapclient behavior available through the local API.
 - Kept USB flashing as the required recovery path.
 
-## Changes Since v1.0.2
+## Changes Since v1.0.3
 
-- Changed Snapclient/Wi-Fi LED behavior so it blinks while connecting to Wi-Fi and stays solid once connected.
+- Added a persisted `battery` / `mains` power-source setting.
+- Added `power_source` and `capabilities.power_source` to `/api/status`.
+- Added `POST /api/power-source` for companion apps to change the setting after deployment.
+- Suppressed battery voltage/percentage reporting when the saved power source is `mains`.
 
 ## Firmware Version
 
-- Previous version: `1.0.2`
-- New version: `1.0.3`
+- Previous version: `1.0.3`
+- New version: `1.1.0`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.0.3`
-- `firmwareVersion`: `1.0.3`
+- `version`: `1.1.0`
+- `firmwareVersion`: `1.1.0`
 
 Versioning policy:
 
@@ -185,17 +194,20 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `1.0.3` build output size is comfortably below the OTA slot limit:
+The current `1.1.0` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
 - Built firmware image: about `1911141` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.0.3` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.0.3`.
+- Flash `1.1.0` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.1.0`.
 - Confirm `GET /api/status` reports `project` as `ESP32 Audio Client`.
-- Confirm `GET /api/status` reports `firmwareVersion` as `1.0.3` after Wi-Fi connects.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.0` after Wi-Fi connects.
+- Confirm `GET /api/status` reports `power_source`.
+- Confirm `POST /api/power-source` accepts `battery` and `mains` and persists after reboot.
+- Confirm `power_source: "mains"` reports `battery.available: false`.
 - Confirm the Wi-Fi LED blinks while connecting and stays solid once connected.
 - Temporarily unavailable Wi-Fi should log diagnostics and retry without a reboot loop.
 - Leaving the device powered on with no active audio should not trigger a playback-idle reboot.

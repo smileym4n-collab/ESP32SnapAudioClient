@@ -72,22 +72,30 @@ Recommended response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "1.0.3",
-  "firmwareVersion": "1.0.3",
+  "version": "1.1.0",
+  "firmwareVersion": "1.1.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
   "ota_supported": true,
   "update_in_progress": false,
   "runtime_mode": "snapclient",
+  "power_source": "battery",
   "channel_mode": "stereo",
   "capabilities": {
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
+    "power_source": true,
     "firmware_update": true
   }
 }
 ```
+
+Power source reporting is used by companion apps to decide whether to display
+battery UI:
+
+- `power_source: "battery"` means show battery state when `battery.available` is `true`
+- `power_source: "mains"` means hide battery UI even though the device firmware supports battery-capable hardware
 
 If OTA is not available, report `false` or omit the OTA fields. SnapControl will keep standard Snapcast controls available and hide the upload button.
 

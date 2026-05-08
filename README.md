@@ -1,6 +1,6 @@
 # ESP32 Audio Client
 
-Version: **1.0.3**
+Version: **1.1.0**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 
@@ -13,6 +13,7 @@ Default behavior after this change:
 - **MCLK is disabled by default**
 - **Snapclient mode exposes `Stereo`, `Left`, and `Right` channel routing**
 - **Snapclient mode exposes a local OTA firmware upload endpoint for prebuilt `.bin` app images**
+- **Snapclient mode exposes a saved `battery` / `mains` power-source setting for companion apps**
 - **Snapclient/Wi-Fi LED blinks while connecting and stays solid once connected**
 - **Snapclient mode retries Wi-Fi startup failures without rebooting continuously**
 
@@ -140,8 +141,9 @@ If either LED is wired as GPIO -> resistor -> LED -> GND, change `WIFI_STATUS_LE
 
 Snapclient mode exposes a small local HTTP API on port `8080` for controls that Snapserver does not provide directly.
 
-- `GET /api/status` returns firmware identity, `firmwareVersion`, runtime mode, current channel mode, battery status, and capabilities.
+- `GET /api/status` returns firmware identity, `firmwareVersion`, runtime mode, power source, current channel mode, battery status, and capabilities.
 - `POST /api/channel-mode` accepts `{"channel_mode":"stereo"}`, `{"channel_mode":"left"}`, or `{"channel_mode":"right"}`.
+- `POST /api/power-source` accepts `{"power_source":"battery"}` or `{"power_source":"mains"}` and saves whether companion apps should show battery UI.
 - `POST /api/bluetooth-name` accepts `{"bluetooth_name":"CoolCube Kitchen"}` and saves the name for later Bluetooth-mode boots.
 - `POST /api/firmware` accepts a raw PlatformIO firmware `.bin` app image for OTA update when OTA support is reported by `/api/status`.
 
@@ -162,6 +164,11 @@ See [API.md](/C:/ESPAudioClient/API.md) for the companion-app API reference and 
 ## Battery monitor
 
 The Snapclient board can report a 4S lithium pack voltage and estimated percentage through `/api/status`.
+
+The power source can be changed at runtime through `POST /api/power-source` and
+is saved in ESP32 preferences, so it survives reboots and OTA updates. Use
+`battery` for boards with the voltage divider fitted and `mains` for boards that
+should hide battery UI in companion apps.
 
 Default hardware assumption:
 

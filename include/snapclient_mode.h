@@ -12,6 +12,7 @@
 #include "audio_output_controller.h"
 #include "battery_monitor.h"
 #include "project_snap_output.h"
+#include "power_source.h"
 #include "snapcast_pcm_decoder.h"
 #include "snapclient_time_sync.h"
 #include "runtime_mode.h"
@@ -39,6 +40,7 @@ class SnapclientMode : public RuntimeMode {
   void sendControlStatus();
   void handleSetChannelMode();
   void handleSetBluetoothName();
+  void handleSetPowerSource();
   void handleFirmwareUploadRaw();
   void handleFirmwareUploadComplete();
   void failFirmwareUpload(int statusCode,
@@ -71,6 +73,7 @@ class SnapclientMode : public RuntimeMode {
   int otaResponseStatus_ = 500;
   String otaError_;
   String otaMessage_;
+  app_config::PowerSource powerSource_ = app_config::PowerSource::Battery;
   bool snapclientStarted_ = false;
   bool wifiStartupFailed_ = false;
   bool restartPrepared_ = false;

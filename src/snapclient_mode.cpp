@@ -7,6 +7,7 @@
 #include "bluetooth_name_store.h"
 #include "board_config.h"
 #include "channel_mode_store.h"
+#include "power_source_store.h"
 #include "project_snap_processor_rtos.h"
 #include "snapclient_config.h"
 
@@ -59,6 +60,37 @@ bool extractChannelMode(const String &body, app_config::ChannelMode &mode) {
 
   const String value = body.substring(valueStart + 1, valueEnd);
   return app_config::parseChannelMode(value, mode);
+}
+
+bool extractPowerSource(const String &body, app_config::PowerSource &source) {
+  app_config::PowerSource rawSource = app_config::PowerSource::Battery;
+  if (app_config::parsePowerSource(body, rawSource)) {
+    source = rawSource;
+    return true;
+  }
+
+  const int keyIndex = body.indexOf("\"power_source\"");
+  if (keyIndex < 0) {
+    return false;
+  }
+
+  const int colonIndex = body.indexOf(':', keyIndex);
+  if (colonIndex < 0) {
+    return false;
+  }
+
+  const int valueStart = body.indexOf('"', colonIndex + 1);
+  if (valueStart < 0) {
+    return false;
+  }
+
+  const int valueEnd = body.indexOf('"', valueStart + 1);
+  if (valueEnd < 0) {
+    return false;
+  }
+
+  const String value = body.substring(valueStart + 1, valueEnd);
+  return app_config::parsePowerSource(value, source);
 }
 
 }  // namespace
@@ -126,8 +158,12 @@ bool SnapclientMode::startSnapclientServices() {
   audioOutput_.setChannelMode(loadChannelModePreference());
   Serial.printf("[channel] snapclient channel mode=%s\n",
                 app_config::channelModeName(audioOutput_.channelMode()));
-  batteryMonitor_.begin();
-  batteryMonitor_.update(true);
+  powerSource_ = loadPowerSourcePreference();
+  Serial.printf("[power] source=%s\n", app_config::powerSourceName(powerSource_));
+  if (powerSource_ == app_config::PowerSource::Battery) {
+    batteryMonitor_.begin();
+    batteryMonitor_.update(true);
+  }
   beginControlApi();
 
   snapClient_.setSnapProcessor(*snapProcessor_);
@@ -208,7 +244,9 @@ void SnapclientMode::loop() {
     return;
   }
 
-  batteryMonitor_.update();
+  if (powerSource_ == app_config::PowerSource::Battery) {
+    batteryMonitor_.update();
+  }
   handleControlApi();
 
   if (otaRebootPending_ &&
@@ -473,6 +511,7 @@ void SnapclientMode::beginControlApi() {
   controlServer_.on("/api/status", HTTP_GET, [this]() { sendControlStatus(); });
   controlServer_.on("/api/channel-mode", HTTP_POST, [this]() { handleSetChannelMode(); });
   controlServer_.on("/api/bluetooth-name", HTTP_POST, [this]() { handleSetBluetoothName(); });
+  controlServer_.on("/api/power-source", HTTP_POST, [this]() { handleSetPowerSource(); });
   controlServer_.on(
       "/api/firmware",
       HTTP_POST,
@@ -493,8 +532,12 @@ void SnapclientMode::handleControlApi() {
 }
 
 void SnapclientMode::sendControlStatus() {
-  batteryMonitor_.update();
-  const BatteryStatus battery = batteryMonitor_.status();
+  if (powerSource_ == app_config::PowerSource::Battery) {
+    batteryMonitor_.update();
+  }
+  const BatteryStatus battery =
+      powerSource_ == app_config::PowerSource::Battery ? batteryMonitor_.status()
+                                                       : BatteryStatus{};
   const size_t partitionSize = otaPartitionSize();
   const bool otaSupported =
       app_config::OTA_FIRMWARE_UPDATE_ENABLED && partitionSize > 0;
@@ -517,6 +560,9 @@ void SnapclientMode::sendControlStatus() {
   response += ",\"update_in_progress\":";
   response += otaUpdateInProgress_ ? "true" : "false";
   response += ",\"runtime_mode\":\"snapclient\"";
+  response += ",\"power_source\":\"";
+  response += app_config::powerSourceName(powerSource_);
+  response += "\"";
   response += ",\"channel_mode\":\"";
   response += app_config::channelModeName(audioOutput_.channelMode());
   response += "\",\"bluetooth_name\":\"";
@@ -531,7 +577,7 @@ void SnapclientMode::sendControlStatus() {
     response += battery.percent;
   }
   response += "}";
-  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"firmware_update\":";
+  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"power_source\":true,\"firmware_update\":";
   response += otaSupported ? "true" : "false";
   response += "}";
   response += "}";
@@ -571,6 +617,32 @@ void SnapclientMode::handleSetBluetoothName() {
 
   saveBluetoothNamePreference(requestedName);
   Serial.printf("[bluetooth] saved device name=%s\n", requestedName.c_str());
+  sendControlStatus();
+}
+
+void SnapclientMode::handleSetPowerSource() {
+  const String body = controlServer_.arg("plain");
+  app_config::PowerSource requestedSource = app_config::PowerSource::Battery;
+
+  if (!extractPowerSource(body, requestedSource)) {
+    controlServer_.send(
+        400,
+        "application/json",
+        "{\"error\":\"invalid_power_source\",\"allowed\":[\"battery\",\"mains\"]}");
+    return;
+  }
+
+  const bool wasBattery = powerSource_ == app_config::PowerSource::Battery;
+  powerSource_ = requestedSource;
+  savePowerSourcePreference(powerSource_);
+  Serial.printf("[power] saved source=%s\n",
+                app_config::powerSourceName(powerSource_));
+
+  if (!wasBattery && powerSource_ == app_config::PowerSource::Battery) {
+    batteryMonitor_.begin();
+    batteryMonitor_.update(true);
+  }
+
   sendControlStatus();
 }
 

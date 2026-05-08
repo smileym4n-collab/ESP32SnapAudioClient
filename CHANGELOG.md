@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-08
+
+- Added a persisted `battery` / `mains` power-source setting for Snapclient mode.
+- Added `power_source` and `capabilities.power_source` to `/api/status`.
+- Added `POST /api/power-source` so companion apps can change the saved power source after deployment.
+- Suppressed battery voltage/percentage reporting when the saved power source is `mains`.
+
 ## [1.0.3] - 2026-05-08
 
 - Changed Snapclient/Wi-Fi LED behavior so it blinks while connecting to Wi-Fi and stays solid once connected.

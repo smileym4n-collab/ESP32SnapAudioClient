@@ -23,14 +23,15 @@ Example response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "1.0.3",
-  "firmwareVersion": "1.0.3",
+  "version": "1.1.0",
+  "firmwareVersion": "1.1.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
   "ota_supported": true,
   "update_in_progress": false,
   "runtime_mode": "snapclient",
+  "power_source": "battery",
   "channel_mode": "stereo",
   "bluetooth_name": "CoolCube",
   "battery": {
@@ -41,6 +42,7 @@ Example response:
   "capabilities": {
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
+    "power_source": true,
     "firmware_update": true
   }
 }
@@ -48,6 +50,7 @@ Example response:
 
 Battery fields:
 
+- `power_source`: saved power source setting, either `battery` or `mains`
 - `available`: `true` when battery sensing is enabled and a reading has been taken
 - `voltage`: reconstructed 4S pack voltage, not the ADC divider voltage
 - `percent`: estimated 4S state of charge from the firmware lookup curve
@@ -68,6 +71,9 @@ If battery sensing is disabled or the configured pin is not ADC1-capable, the re
   }
 }
 ```
+
+Mains-powered devices also report `battery.available: false`. Companion apps
+should hide battery UI when `power_source` is `mains`.
 
 ## Set Channel Mode
 
@@ -91,6 +97,31 @@ Allowed values:
 - `right`: both DAC channels play the right input channel
 
 The selected mode is saved in ESP32 preferences and restored on later Snapclient boots.
+
+Successful responses return the same shape as `GET /api/status`.
+
+## Set Power Source
+
+```text
+POST /api/power-source
+Content-Type: application/json
+```
+
+Request body:
+
+```json
+{
+  "power_source": "mains"
+}
+```
+
+Allowed values:
+
+- `battery`: report battery voltage and percentage when the sense input is available
+- `mains`: suppress battery reporting so companion apps can hide battery UI
+
+The selected power source is saved in ESP32 preferences and restored on later
+Snapclient boots, including after OTA updates.
 
 Successful responses return the same shape as `GET /api/status`.
 

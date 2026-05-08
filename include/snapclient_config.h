@@ -2,18 +2,20 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.0.3
+  Version: 1.1.0
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
 #include <Arduino.h>
 
+#include "power_source.h"
+
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.0.3"
+#define APP_FIRMWARE_VERSION "1.1.0"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.0.3"
+#define APP_FIRMWARE_VERSION_TAG "v1.1.0"
 #endif
 
 #if __has_include("secrets.h")
@@ -71,6 +73,7 @@ static constexpr float BATTERY_ADC_REF_VOLTAGE = 3.3f;
 static constexpr float BATTERY_ADC_FULL_SCALE_COUNTS = 4095.0f;
 static constexpr float BATTERY_PERCENT_SMOOTH_ALPHA = 0.20f;
 static constexpr uint32_t BATTERY_ADC_DEFAULT_VREF_MV = 1100;
+static constexpr PowerSource DEFAULT_POWER_SOURCE = PowerSource::Battery;
 
 // ---------- Snapserver ----------
 inline IPAddress snapServerIp() { return IPAddress(192, 168, 5, 106); }

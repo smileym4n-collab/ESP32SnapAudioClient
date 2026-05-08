@@ -17,14 +17,15 @@ Example response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "1.0.3",
-  "firmwareVersion": "1.0.3",
+  "version": "1.1.0",
+  "firmwareVersion": "1.1.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
   "ota_supported": true,
   "update_in_progress": false,
   "runtime_mode": "snapclient",
+  "power_source": "battery",
   "channel_mode": "stereo",
   "bluetooth_name": "CoolCube",
   "battery": {
@@ -35,6 +36,7 @@ Example response:
   "capabilities": {
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
+    "power_source": true,
     "firmware_update": true
   }
 }
@@ -53,6 +55,7 @@ Fields:
 | `ota_supported` | boolean | `true` when `POST /api/firmware` can accept app-image uploads |
 | `update_in_progress` | boolean | `true` while a firmware upload is active |
 | `runtime_mode` | string | Current mode; `/api/status` is available in Snapclient mode |
+| `power_source` | string | Saved power source: `battery` or `mains` |
 | `channel_mode` | string | Current local output routing: `stereo`, `left`, or `right` |
 | `bluetooth_name` | string | Saved Bluetooth device name used on later Bluetooth-mode boots |
 | `battery.available` | boolean | `true` when battery sensing is enabled and a reading is available |
@@ -60,6 +63,7 @@ Fields:
 | `battery.percent` | number | Estimated 4S battery percentage, `0..100` |
 | `capabilities.channel_modes` | string array | Channel modes accepted by `POST /api/channel-mode` |
 | `capabilities.bluetooth_name` | boolean | `true` when `POST /api/bluetooth-name` is available |
+| `capabilities.power_source` | boolean | `true` when `POST /api/power-source` is available |
 | `capabilities.firmware_update` | boolean | `true` when `POST /api/firmware` is available |
 
 When battery sensing is unavailable:
@@ -71,6 +75,9 @@ When battery sensing is unavailable:
   }
 }
 ```
+
+When `power_source` is `mains`, companion apps should hide battery UI. The
+status response reports `battery.available: false`.
 
 ## POST /api/channel-mode
 
@@ -105,6 +112,43 @@ Invalid requests return:
 {
   "error": "invalid_channel_mode",
   "allowed": ["stereo", "left", "right"]
+}
+```
+
+## POST /api/power-source
+
+Sets whether this device should be treated as a battery-powered or mains-powered
+client. The setting is saved in ESP32 preferences and survives reboots and OTA
+updates.
+
+Request:
+
+```http
+POST /api/power-source
+Content-Type: application/json
+```
+
+```json
+{
+  "power_source": "mains"
+}
+```
+
+Allowed `power_source` values:
+
+| Value | Behavior |
+| --- | --- |
+| `battery` | Report battery voltage/percentage when the configured ADC sense input is available |
+| `mains` | Suppress battery readings and report `battery.available: false` |
+
+Successful responses return the same shape as `GET /api/status`.
+
+Invalid requests return:
+
+```json
+{
+  "error": "invalid_power_source",
+  "allowed": ["battery", "mains"]
 }
 ```
 
