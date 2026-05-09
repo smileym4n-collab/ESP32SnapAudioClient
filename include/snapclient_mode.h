@@ -29,6 +29,7 @@ class SnapclientMode : public RuntimeMode {
   const char *name() const override { return "Snapclient"; }
   void prepareForRestart() override;
   bool wifiConnected() const override;
+  bool lowBatteryWarningActive() const override;
 
  private:
   bool connectWifiWithTimeout();

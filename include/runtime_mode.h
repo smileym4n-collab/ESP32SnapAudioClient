@@ -10,4 +10,5 @@ class RuntimeMode {
   virtual void prepareForRestart() {}
   virtual bool bluetoothClientConnected() const { return false; }
   virtual bool wifiConnected() const { return true; }
+  virtual bool lowBatteryWarningActive() const { return false; }
 };

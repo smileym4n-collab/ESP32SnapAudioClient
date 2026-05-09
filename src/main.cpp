@@ -1,6 +1,6 @@
 /*
   Project: ESP32 audio client (SnapApp channel control API)
-  Version: 1.1.0
+  Version: 1.1.1
   Framework: Arduino (PlatformIO)
 
   Pin map (ESP32-WROVER-IE-N16R8 -> external I2S DAC):
@@ -12,6 +12,7 @@
     GPIO23 -> Runtime mode-toggle button (active low with internal pull-up)
     GPIO32 -> Wi-Fi/Snapclient status LED (active low, common-anode RGB)
     GPIO33 -> Bluetooth status LED (active low, common-anode RGB)
+    GPIO14 -> Low battery warning LED (active low, common-anode RGB)
 
   Notes:
   - Cold boot always starts in Snapclient mode.
@@ -78,9 +79,11 @@ void setup() {
                     : static_cast<RuntimeMode *>(&gBluetoothMode);
 
   Serial.printf("[boot] selected mode=%s\n", gActiveMode->name());
-  Serial.printf("[led] wifi=GPIO%d blink connecting/solid connected, bt=GPIO%d blink waiting/solid connected\n",
+  Serial.printf("[led] wifi=GPIO%d blink connecting/solid connected, bt=GPIO%d blink waiting/solid connected, low_battery=GPIO%d below %d%%\n",
                 board_config::WIFI_STATUS_LED_PIN,
-                board_config::BT_STATUS_LED_PIN);
+                board_config::BT_STATUS_LED_PIN,
+                board_config::LOW_BATTERY_LED_PIN,
+                app_config::BATTERY_LOW_WARNING_PERCENT);
   Serial.printf("[button] pin=%d, press while running to toggle mode and reboot\n",
                 board_config::BOOT_MODE_BUTTON_PIN);
   Serial.printf("[battery] sense=%s pin=%d\n",
@@ -102,6 +105,7 @@ void loop() {
   if (gActiveMode != nullptr) {
     gModeLed.setBluetoothClientConnected(gActiveMode->bluetoothClientConnected());
     gModeLed.setWifiConnected(gActiveMode->wifiConnected());
+    gModeLed.setLowBatteryWarningActive(gActiveMode->lowBatteryWarningActive());
   }
   gModeLed.update();
   gModeSwitch.update();

@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.1.0
+  Version: 1.1.1
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.1.0"
+#define APP_FIRMWARE_VERSION "1.1.1"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.1.0"
+#define APP_FIRMWARE_VERSION_TAG "v1.1.1"
 #endif
 
 #if __has_include("secrets.h")
@@ -74,6 +74,7 @@ static constexpr float BATTERY_ADC_FULL_SCALE_COUNTS = 4095.0f;
 static constexpr float BATTERY_PERCENT_SMOOTH_ALPHA = 0.20f;
 static constexpr uint32_t BATTERY_ADC_DEFAULT_VREF_MV = 1100;
 static constexpr PowerSource DEFAULT_POWER_SOURCE = PowerSource::Battery;
+static constexpr int BATTERY_LOW_WARNING_PERCENT = 20;
 
 // ---------- Snapserver ----------
 inline IPAddress snapServerIp() { return IPAddress(192, 168, 5, 106); }
@@ -100,6 +101,7 @@ static constexpr uint32_t MODE_SWITCH_MAGIC = 0x534D4F44;  // "SMOD"
 // Bluetooth blinks while waiting for a source and is steady once connected.
 static constexpr uint32_t MODE_LED_WIFI_BLINK_INTERVAL_MS = 250;
 static constexpr uint32_t MODE_LED_BLUETOOTH_BLINK_INTERVAL_MS = 250;
+static constexpr uint32_t MODE_LED_LOW_BATTERY_CYCLE_MS = 1000;
 
 // ---------- Audio format ----------
 // Keep this aligned with the Snapserver PCM stream profile and the external DAC.

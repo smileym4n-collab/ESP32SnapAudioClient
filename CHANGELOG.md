@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-09
+
+- Added a low-battery warning LED on GPIO14 for the red RGB LED channel.
+- Changed status LED behavior so battery-powered devices at or below 20% alternate once per second between the active mode LED and the red low-battery LED.
+- Kept the low-battery LED disabled when the saved power source is `mains` or battery sensing is unavailable.
+
 ## [1.1.0] - 2026-05-08
 
 - Added a persisted `battery` / `mains` power-source setting for Snapclient mode.

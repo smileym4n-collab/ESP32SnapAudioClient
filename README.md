@@ -1,6 +1,6 @@
 # ESP32 Audio Client
 
-Version: **1.1.0**
+Version: **1.1.1**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 
@@ -15,6 +15,7 @@ Default behavior after this change:
 - **Snapclient mode exposes a local OTA firmware upload endpoint for prebuilt `.bin` app images**
 - **Snapclient mode exposes a saved `battery` / `mains` power-source setting for companion apps**
 - **Snapclient/Wi-Fi LED blinks while connecting and stays solid once connected**
+- **Low battery warning uses the red RGB LED channel on `GPIO14` at 20% or below**
 - **Snapclient mode retries Wi-Fi startup failures without rebooting continuously**
 
 That default suits many common **PCM5102-style DAC modules**, which usually do not require a separate MCLK line.
@@ -41,6 +42,7 @@ Edit hardware assignments in [board_config.h](/C:/ESPAudioClient/include/board_c
 | Mode button | `GPIO23` | Runtime momentary mode-toggle button, active low with internal pull-up |
 | Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status LED, active low for common-anode RGB wiring |
 | BT LED | `GPIO33` | Bluetooth status LED, active low for common-anode RGB wiring |
+| Low battery LED | `GPIO14` | Red low-battery warning LED, active low for common-anode RGB wiring |
 
 ## MCLK configuration
 
@@ -125,6 +127,7 @@ The status LED behavior is intentionally simple:
 
 - **Snapclient mode**: Wi-Fi LED on `GPIO32` **blinks while connecting** and is **solid ON once Wi-Fi is connected**
 - **Bluetooth mode**: BT LED on `GPIO33` **blinks while waiting for a source** and is **solid ON once a Bluetooth client is connected**
+- **Low battery**: red LED on `GPIO14` alternates once per second with the active mode LED when battery mode is selected and the battery estimate is `20%` or lower
 
 The LED logic is implemented in [mode_led_controller.cpp](/C:/ESPAudioClient/src/mode_led_controller.cpp).
 
@@ -133,9 +136,10 @@ Recommended default LED wiring:
 - connect the RGB LED common anode to `3V3`
 - connect the Wi-Fi LED cathode through a resistor to `GPIO32`
 - connect the BT LED cathode through a resistor to `GPIO33`
+- connect the red low-battery LED cathode through a resistor to `GPIO14`
 - this matches the default active-low common-anode configuration
 
-If either LED is wired as GPIO -> resistor -> LED -> GND, change `WIFI_STATUS_LED_ACTIVE_HIGH` or `BT_STATUS_LED_ACTIVE_HIGH` to `true` in [board_config.h](/C:/ESPAudioClient/include/board_config.h).
+If any LED is wired as GPIO -> resistor -> LED -> GND, change `WIFI_STATUS_LED_ACTIVE_HIGH`, `BT_STATUS_LED_ACTIVE_HIGH`, or `LOW_BATTERY_LED_ACTIVE_HIGH` to `true` in [board_config.h](/C:/ESPAudioClient/include/board_config.h).
 
 ## SnapApp control API
 
@@ -186,7 +190,7 @@ The current board pinout sets `BATTERY_SENSE_PIN` to `GPIO34` for the board SENS
 - [src/main.cpp](/C:/ESPAudioClient/src/main.cpp) - boot log, PSRAM setup, runtime mode setup, and LED initialization
 - [src/boot_mode_selector.cpp](/C:/ESPAudioClient/src/boot_mode_selector.cpp) - boot-time mode resolution for cold boot vs requested software restart
 - [src/mode_switch_controller.cpp](/C:/ESPAudioClient/src/mode_switch_controller.cpp) - runtime button press detection, debounce, mode toggle request, and reboot
-- [src/mode_led_controller.cpp](/C:/ESPAudioClient/src/mode_led_controller.cpp) - Wi-Fi and Bluetooth status LED behavior
+- [src/mode_led_controller.cpp](/C:/ESPAudioClient/src/mode_led_controller.cpp) - Wi-Fi, Bluetooth, and low-battery status LED behavior
 - [src/snapclient_mode.cpp](/C:/ESPAudioClient/src/snapclient_mode.cpp) - Wi-Fi Snapclient mode
 - [src/bluetooth_mode.cpp](/C:/ESPAudioClient/src/bluetooth_mode.cpp) - Bluetooth A2DP sink mode
 - [API.md](/C:/ESPAudioClient/API.md) - compact companion-app API reference

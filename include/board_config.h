@@ -32,6 +32,8 @@ static constexpr int WIFI_STATUS_LED_PIN = 32;
 static constexpr bool WIFI_STATUS_LED_ACTIVE_HIGH = false;
 static constexpr int BT_STATUS_LED_PIN = 33;
 static constexpr bool BT_STATUS_LED_ACTIVE_HIGH = false;
+static constexpr int LOW_BATTERY_LED_PIN = 14;
+static constexpr bool LOW_BATTERY_LED_ACTIVE_HIGH = false;
 
 // Backward-compatible aliases for older code/docs that refer to the single
 // status LED. The Wi-Fi LED is the normal Snapclient-mode status indicator.

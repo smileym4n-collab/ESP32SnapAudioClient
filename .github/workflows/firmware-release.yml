@@ -53,9 +53,15 @@ jobs:
 
       - name: Check tag matches firmware version
         run: |
-          VERSION="$(cat VERSION)"
+          VERSION="$(tr -d '\r\n' < VERSION)"
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          test "$VERSION" = "$TAG_VERSION"
+          if [ "$VERSION" != "$TAG_VERSION" ]; then
+            echo "Firmware version mismatch."
+            echo "VERSION file: $VERSION"
+            echo "Git tag:      $GITHUB_REF_NAME"
+            echo "Expected tag: v$VERSION"
+            exit 1
+          fi
 
       - name: Build firmware
         run: pio run

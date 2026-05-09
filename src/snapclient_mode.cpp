@@ -129,6 +129,16 @@ bool SnapclientMode::wifiConnected() const {
   return WiFi.status() == WL_CONNECTED;
 }
 
+bool SnapclientMode::lowBatteryWarningActive() const {
+  if (powerSource_ != app_config::PowerSource::Battery) {
+    return false;
+  }
+
+  const BatteryStatus battery = batteryMonitor_.status();
+  return battery.available &&
+         battery.percent <= app_config::BATTERY_LOW_WARNING_PERCENT;
+}
+
 bool SnapclientMode::begin() {
   Serial.println("[mode] starting Snapclient over Wi-Fi");
   Serial.println("[wifi] connecting...");

@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v1.1.0
+# Release Notes - ESP32 Audio Client v1.1.1
 
-Release date: 2026-05-08
+Release date: 2026-05-09
 
 Target hardware:
 
@@ -24,6 +24,8 @@ This release also removes the Snapclient playback-idle restart behavior. The dev
 The Snapclient/Wi-Fi LED now mirrors the Bluetooth waiting behavior: it blinks while connecting to Wi-Fi and stays solid once connected.
 
 This release adds a persisted power-source setting for battery-powered and mains-powered devices. Companion apps can now switch a deployed device between `battery` and `mains` over the local API, and `/api/status` reports whether battery UI should be shown.
+
+This release also adds a low-battery warning output on `GPIO14` for the red RGB LED channel. When a battery-powered device reaches `20%` or lower, the firmware alternates once per second between the active mode LED and the red low-battery LED.
 
 ## What This Firmware Does
 
@@ -96,26 +98,27 @@ Hardware notes:
 - Added `power_source` and `capabilities.power_source` to `/api/status`.
 - Added `POST /api/power-source` for companion apps.
 - Suppressed battery voltage/percentage reporting when `power_source` is `mains`.
+- Added red low-battery warning output on `GPIO14` at `20%` or lower.
+- Alternated the low-battery warning LED with the active mode LED once per second.
 - Kept channel routing, Bluetooth-name control, battery reporting, and existing Snapclient behavior available through the local API.
 - Kept USB flashing as the required recovery path.
 
-## Changes Since v1.0.3
+## Changes Since v1.1.0
 
-- Added a persisted `battery` / `mains` power-source setting.
-- Added `power_source` and `capabilities.power_source` to `/api/status`.
-- Added `POST /api/power-source` for companion apps to change the setting after deployment.
-- Suppressed battery voltage/percentage reporting when the saved power source is `mains`.
+- Added a low-battery warning LED on `GPIO14` for the red RGB LED channel.
+- Alternated the active mode LED and red low-battery LED once per second when battery percentage is `20%` or lower.
+- Kept the low-battery LED disabled for `mains` power source mode.
 
 ## Firmware Version
 
-- Previous version: `1.0.3`
-- New version: `1.1.0`
+- Previous version: `1.1.0`
+- New version: `1.1.1`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.1.0`
-- `firmwareVersion`: `1.1.0`
+- `version`: `1.1.1`
+- `firmwareVersion`: `1.1.1`
 
 Versioning policy:
 
@@ -194,20 +197,22 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `1.1.0` build output size is comfortably below the OTA slot limit:
+The current `1.1.1` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
-- Built firmware image: about `1911141` bytes
+- Built firmware image: about `1921728` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.1.0` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.1.0`.
+- Flash `1.1.1` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.1.1`.
 - Confirm `GET /api/status` reports `project` as `ESP32 Audio Client`.
-- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.0` after Wi-Fi connects.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.1` after Wi-Fi connects.
 - Confirm `GET /api/status` reports `power_source`.
 - Confirm `POST /api/power-source` accepts `battery` and `mains` and persists after reboot.
 - Confirm `power_source: "mains"` reports `battery.available: false`.
+- Confirm a battery reading of `20%` or lower alternates the active mode LED with the red LED on `GPIO14` once per second.
+- Confirm `power_source: "mains"` keeps the red low-battery LED off.
 - Confirm the Wi-Fi LED blinks while connecting and stays solid once connected.
 - Temporarily unavailable Wi-Fi should log diagnostics and retry without a reboot loop.
 - Leaving the device powered on with no active audio should not trigger a playback-idle reboot.
