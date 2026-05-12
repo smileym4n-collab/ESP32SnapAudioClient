@@ -213,6 +213,7 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
     }
 
     size_t chunkSize = 0;
+    bool copiedChunk = false;
     if (size_queue.dequeue(chunkSize)) {
       if (chunkBuffer_.size() < chunkSize) {
         chunkBuffer_.resize(chunkSize);
@@ -251,9 +252,12 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
       playedBytesTotal_ += static_cast<uint32_t>(bytesWritten);
       lastActivityMs_ = millis();
       maybeLogRuntime(nullptr);
+      copiedChunk = bytesWritten > 0;
     }
 
-    delay(1);
+    if (!copiedChunk) {
+      delay(1);
+    }
   }
 
   void maybeLogRuntime(const char *reason, bool force = false) {

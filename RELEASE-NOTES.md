@@ -9,6 +9,12 @@ Target hardware:
 - External I2S DAC
 - PCM Snapserver stream
 
+## [Unreleased]
+
+- Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop to reduce PCM handoff jitter.
+- Let the Snapclient output task continue draining queued audio after successful writes instead of adding a fixed 1 ms pause per chunk.
+- Disabled hot-path PCM peak/stat scans while periodic audio stats are off.
+
 ## Summary
 
 This release adds the first OTA-capable firmware for the ESP32 Snapclient build. Install this version over USB once, then future compatible firmware builds can be uploaded from SnapControl over the local network.

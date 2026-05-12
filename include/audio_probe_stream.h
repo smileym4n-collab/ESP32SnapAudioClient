@@ -85,7 +85,9 @@ class AudioProbeStream : public audio_tools::AudioStream {
     }
 
     const size_t written = target_->write(writeData, writeLen);
-    accumulate(writeData, written);
+    if (periodicStatsEnabled_) {
+      accumulate(writeData, written);
+    }
     maybeLogFirstWrites(writeData, written);
     maybeLog();
     return written;

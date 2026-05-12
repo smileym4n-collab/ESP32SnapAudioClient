@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop so queued PCM gets handed to I2S with less scheduling jitter.
+- Removed the extra 1 ms output-task delay after successful queued PCM writes, allowing the task to drain available audio chunks continuously.
+- Stopped hot-path PCM peak/stat accumulation when periodic audio stats are disabled.
+
 ## [1.1.1] - 2026-05-09
 
 - Added a low-battery warning LED on GPIO14 for the red RGB LED channel.

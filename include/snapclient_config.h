@@ -169,6 +169,9 @@ static constexpr uint32_t SNAPCLIENT_TASK_STOP_TIMEOUT_MS = 1000;
 // Leave periodic Snapclient stats off during live audio testing so the UART
 // does not add avoidable scheduling pressure. Warnings/errors still log.
 static constexpr bool SNAPCLIENT_PERIODIC_STATS_ENABLED = false;
+// Keep hot-path PCM peak scans and one-second I2S stats disabled unless needed
+// during bench diagnosis.
+static constexpr bool AUDIO_DEBUG_STATS_ENABLED = false;
 static constexpr uint32_t RESTART_DELAY_MS = 1500;
 static constexpr uint32_t AUDIO_DEBUG_LOG_INTERVAL_MS = 1000;
 

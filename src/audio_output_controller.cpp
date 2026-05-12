@@ -181,23 +181,26 @@ size_t AudioOutputController::writeRaw(const uint8_t *data, size_t length) {
       (config_.bits_per_sample == 16 && gainQ15 < kFullScaleGainQ15)
           ? writeGainAdjusted(data, length, gainQ15)
           : i2sOut_.write(data, length);
-  windowBytes += static_cast<uint32_t>(written);
 
-  if (written > 0 && config_.bits_per_sample == 16) {
-    const uint16_t chunkPeak = maxAbsPcm16(data, written);
-    if (chunkPeak > windowPeak) {
-      windowPeak = chunkPeak;
+  if (app_config::AUDIO_DEBUG_STATS_ENABLED) {
+    windowBytes += static_cast<uint32_t>(written);
+
+    if (written > 0 && config_.bits_per_sample == 16) {
+      const uint16_t chunkPeak = maxAbsPcm16(data, written);
+      if (chunkPeak > windowPeak) {
+        windowPeak = chunkPeak;
+      }
     }
-  }
 
-  const uint32_t nowMs = millis();
-  if (nowMs - windowStartMs >= app_config::AUDIO_DEBUG_LOG_INTERVAL_MS) {
-    Serial.printf("[i2s] pcm bytes=%lu peak16=%u\n",
-                  static_cast<unsigned long>(windowBytes),
-                  windowPeak);
-    windowStartMs = nowMs;
-    windowBytes = 0;
-    windowPeak = 0;
+    const uint32_t nowMs = millis();
+    if (nowMs - windowStartMs >= app_config::AUDIO_DEBUG_LOG_INTERVAL_MS) {
+      Serial.printf("[i2s] pcm bytes=%lu peak16=%u\n",
+                    static_cast<unsigned long>(windowBytes),
+                    windowPeak);
+      windowStartMs = nowMs;
+      windowBytes = 0;
+      windowPeak = 0;
+    }
   }
 
   return written;

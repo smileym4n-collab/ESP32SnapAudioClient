@@ -211,6 +211,8 @@ bool SnapclientMode::startSnapclientServices() {
                 app_config::SNAP_OUTPUT_REBUFFER_RESUME_PERCENT);
   Serial.printf("[snapclient] queue entry slots=%d\n",
                 RTOS_MAX_QUEUE_ENTRY_COUNT);
+  Serial.printf("[snapclient] output task priority=%d\n",
+                RTOS_TASK_PRIORITY);
   Serial.println("[snapclient] decoder=SnapcastPcmDecoder");
   Serial.printf("[snapclient] output gain=%.2f\n",
                 app_config::SNAPCLIENT_OUTPUT_GAIN);
