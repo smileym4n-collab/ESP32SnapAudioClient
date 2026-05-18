@@ -14,6 +14,8 @@ Target hardware:
 - Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop to reduce PCM handoff jitter.
 - Let the Snapclient output task continue draining queued audio after successful writes instead of adding a fixed 1 ms pause per chunk.
 - Disabled hot-path PCM peak/stat scans while periodic audio stats are off.
+- Clarified local build and release documentation so VS Code links and OTA firmware paths are portable across Windows, macOS, and Linux.
+- Ignored macOS `.DS_Store` metadata files so local VS Code work does not add release-noise files.
 
 ## Summary
 
@@ -142,7 +144,7 @@ After this release is running on the ESP32:
 
 1. Build future firmware with PlatformIO.
 2. Use the generated file:
-   `C:\ESPAudioClient\.pio\build\esp32-wrover-ie-n16r8\firmware.bin`
+   `.pio/build/esp32-wrover-ie-n16r8/firmware.bin`
 3. Upload that file from SnapControl to:
    `POST http://<esp-ip>:8080/api/firmware`
 4. Wait for the ESP32 to reboot.

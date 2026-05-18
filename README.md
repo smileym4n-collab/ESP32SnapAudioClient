@@ -4,7 +4,7 @@ Version: **1.1.1**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 
-Firmware versioning starts at `v1.0.0`. The canonical firmware version is stored in [VERSION](/C:/ESPAudioClient/VERSION), injected into PlatformIO builds, reported by `GET /api/status`, printed at boot, and used for the Snapserver-visible Snapclient hello version.
+Firmware versioning starts at `v1.0.0`. The canonical firmware version is stored in [VERSION](VERSION), injected into PlatformIO builds, reported by `GET /api/status`, printed at boot, and used for the Snapserver-visible Snapclient hello version.
 
 Default behavior after this change:
 
@@ -30,7 +30,7 @@ That default suits many common **PCM5102-style DAC modules**, which usually do n
 
 ## Pin map
 
-Edit hardware assignments in [board_config.h](/C:/ESPAudioClient/include/board_config.h).
+Edit hardware assignments in [board_config.h](include/board_config.h).
 
 | Function | GPIO | Notes |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ Edit hardware assignments in [board_config.h](/C:/ESPAudioClient/include/board_c
 
 ## MCLK configuration
 
-MCLK is now controlled entirely from [board_config.h](/C:/ESPAudioClient/include/board_config.h).
+MCLK is now controlled entirely from [board_config.h](include/board_config.h).
 
 Edit these fields:
 
@@ -100,7 +100,7 @@ Actual behavior:
 - while running in Snapclient: press button -> store Bluetooth request -> reboot -> **Bluetooth mode**
 - while running in Bluetooth: press button -> store Snapclient request -> reboot -> **Snapclient mode**
 
-The runtime mode button logic is handled in [mode_switch_controller.cpp](/C:/ESPAudioClient/src/mode_switch_controller.cpp).
+The runtime mode button logic is handled in [mode_switch_controller.cpp](src/mode_switch_controller.cpp).
 
 Important detail:
 
@@ -129,7 +129,7 @@ The status LED behavior is intentionally simple:
 - **Bluetooth mode**: BT LED on `GPIO33` **blinks while waiting for a source** and is **solid ON once a Bluetooth client is connected**
 - **Low battery**: red LED on `GPIO14` alternates once per second with the active mode LED when battery mode is selected and the battery estimate is `20%` or lower
 
-The LED logic is implemented in [mode_led_controller.cpp](/C:/ESPAudioClient/src/mode_led_controller.cpp).
+The LED logic is implemented in [mode_led_controller.cpp](src/mode_led_controller.cpp).
 
 Recommended default LED wiring:
 
@@ -139,7 +139,7 @@ Recommended default LED wiring:
 - connect the red low-battery LED cathode through a resistor to `GPIO14`
 - this matches the default active-low common-anode configuration
 
-If any LED is wired as GPIO -> resistor -> LED -> GND, change `WIFI_STATUS_LED_ACTIVE_HIGH`, `BT_STATUS_LED_ACTIVE_HIGH`, or `LOW_BATTERY_LED_ACTIVE_HIGH` to `true` in [board_config.h](/C:/ESPAudioClient/include/board_config.h).
+If any LED is wired as GPIO -> resistor -> LED -> GND, change `WIFI_STATUS_LED_ACTIVE_HIGH`, `BT_STATUS_LED_ACTIVE_HIGH`, or `LOW_BATTERY_LED_ACTIVE_HIGH` to `true` in [board_config.h](include/board_config.h).
 
 ## SnapApp control API
 
@@ -163,7 +163,7 @@ The Bluetooth name setting is also saved in ESP32 preferences, but it is only re
 
 OTA firmware updates are intended for trusted local-network use. First-time OTA enablement, partition-table changes, bootloader recovery, and recovery from broken Wi-Fi or a broken OTA endpoint still require USB flashing.
 
-See [API.md](/C:/ESPAudioClient/API.md) for the companion-app API reference and [control-api.md](/C:/ESPAudioClient/docs/control-api.md) for request and response examples.
+See [API.md](API.md) for the companion-app API reference and [control-api.md](docs/control-api.md) for request and response examples.
 
 ## Battery monitor
 
@@ -183,19 +183,19 @@ The current board pinout sets `BATTERY_SENSE_PIN` to `GPIO34` for the board SENS
 
 ## Configuration files
 
-- [snapclient_config.h](/C:/ESPAudioClient/include/snapclient_config.h) - Snapserver address, Bluetooth device name, runtime tuning, mode-switch timing, and visible version values
-- [secrets.example.h](/C:/ESPAudioClient/include/secrets.example.h) - template for the local `include/secrets.h` Wi-Fi credentials file
-- [board_config.h](/C:/ESPAudioClient/include/board_config.h) - all user-editable hardware pin assignments, including optional MCLK control and battery sense input
-- [src/audio_output_controller.cpp](/C:/ESPAudioClient/src/audio_output_controller.cpp) - shared I2S output setup for both Snapclient and Bluetooth modes, including the single MCLK enable/disable decision
-- [src/main.cpp](/C:/ESPAudioClient/src/main.cpp) - boot log, PSRAM setup, runtime mode setup, and LED initialization
-- [src/boot_mode_selector.cpp](/C:/ESPAudioClient/src/boot_mode_selector.cpp) - boot-time mode resolution for cold boot vs requested software restart
-- [src/mode_switch_controller.cpp](/C:/ESPAudioClient/src/mode_switch_controller.cpp) - runtime button press detection, debounce, mode toggle request, and reboot
-- [src/mode_led_controller.cpp](/C:/ESPAudioClient/src/mode_led_controller.cpp) - Wi-Fi, Bluetooth, and low-battery status LED behavior
-- [src/snapclient_mode.cpp](/C:/ESPAudioClient/src/snapclient_mode.cpp) - Wi-Fi Snapclient mode
-- [src/bluetooth_mode.cpp](/C:/ESPAudioClient/src/bluetooth_mode.cpp) - Bluetooth A2DP sink mode
-- [API.md](/C:/ESPAudioClient/API.md) - compact companion-app API reference
-- [docs/control-api.md](/C:/ESPAudioClient/docs/control-api.md) - local companion-app HTTP API
-- [docs/snapserver.md](/C:/ESPAudioClient/docs/snapserver.md) - Snapserver-side recommendations
+- [snapclient_config.h](include/snapclient_config.h) - Snapserver address, Bluetooth device name, runtime tuning, mode-switch timing, and visible version values
+- [secrets.example.h](include/secrets.example.h) - template for the local `include/secrets.h` Wi-Fi credentials file
+- [board_config.h](include/board_config.h) - all user-editable hardware pin assignments, including optional MCLK control and battery sense input
+- [src/audio_output_controller.cpp](src/audio_output_controller.cpp) - shared I2S output setup for both Snapclient and Bluetooth modes, including the single MCLK enable/disable decision
+- [src/main.cpp](src/main.cpp) - boot log, PSRAM setup, runtime mode setup, and LED initialization
+- [src/boot_mode_selector.cpp](src/boot_mode_selector.cpp) - boot-time mode resolution for cold boot vs requested software restart
+- [src/mode_switch_controller.cpp](src/mode_switch_controller.cpp) - runtime button press detection, debounce, mode toggle request, and reboot
+- [src/mode_led_controller.cpp](src/mode_led_controller.cpp) - Wi-Fi, Bluetooth, and low-battery status LED behavior
+- [src/snapclient_mode.cpp](src/snapclient_mode.cpp) - Wi-Fi Snapclient mode
+- [src/bluetooth_mode.cpp](src/bluetooth_mode.cpp) - Bluetooth A2DP sink mode
+- [API.md](API.md) - compact companion-app API reference
+- [docs/control-api.md](docs/control-api.md) - local companion-app HTTP API
+- [docs/snapserver.md](docs/snapserver.md) - Snapserver-side recommendations
 
 ## Firmware behavior
 
@@ -232,7 +232,7 @@ Recommended stream settings:
 - codec: `pcm`
 - sample format: `48000:16:2`
 
-See [snapserver.md](/C:/ESPAudioClient/docs/snapserver.md) for a concrete example.
+See [snapserver.md](docs/snapserver.md) for a concrete example.
 
 Practical recommendations:
 
@@ -261,7 +261,7 @@ Before building for the first time, copy `include/secrets.example.h` to
 `include/secrets.h` out of git.
 
 ```bash
-cd esp32/snapclient
+cd ESP32SnapAudioClient
 pio run
 pio run -t upload
 pio device monitor -b 115200
@@ -284,4 +284,4 @@ pio run -e esp32-wrover-ie-n16r8
 
 ## Change history
 
-See [CHANGELOG.md](/C:/ESPAudioClient/CHANGELOG.md) for versioned change notes.
+See [CHANGELOG.md](CHANGELOG.md) for versioned change notes.

@@ -5,6 +5,8 @@
 - Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop so queued PCM gets handed to I2S with less scheduling jitter.
 - Removed the extra 1 ms output-task delay after successful queued PCM writes, allowing the task to drain available audio chunks continuously.
 - Stopped hot-path PCM peak/stat accumulation when periodic audio stats are disabled.
+- Clarified local build and release documentation so VS Code links and OTA firmware paths are portable across Windows, macOS, and Linux.
+- Ignored macOS `.DS_Store` metadata files so local VS Code work does not add release-noise files.
 
 ## [1.1.1] - 2026-05-09
 
