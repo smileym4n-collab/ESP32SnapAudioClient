@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.1.1
+  Version: 1.1.2
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.1.1"
+#define APP_FIRMWARE_VERSION "1.1.2"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.1.1"
+#define APP_FIRMWARE_VERSION_TAG "v1.1.2"
 #endif
 
 #if __has_include("secrets.h")
@@ -140,10 +140,10 @@ static constexpr uint8_t SNAP_OUTPUT_REBUFFER_RESUME_PERCENT = 75;
 static constexpr bool SNAPCLIENT_REBUFFER_ENABLED = false;
 // Keep a little headroom for hot Spotify/librespot PCM and Snapclient's
 // resampler so full-scale content does not crunch in the DAC path.
-static constexpr float SNAPCLIENT_OUTPUT_GAIN = 0.70f;
+static constexpr float SNAPCLIENT_OUTPUT_GAIN = 0.85f;
 // Final safety trim applied to the actual Snapclient PCM samples immediately
 // before they are handed to I2S. This does not affect Bluetooth mode.
-static constexpr float SNAPCLIENT_FINAL_PCM_GAIN = 0.50f;
+static constexpr float SNAPCLIENT_FINAL_PCM_GAIN = 1.00f;
 // Re-enable the Snapclient resampler, but only allow very small drift
 // corrections so the queue can stay centered without audible pitch wobble.
 static constexpr bool SNAPCLIENT_USE_RESAMPLER = true;

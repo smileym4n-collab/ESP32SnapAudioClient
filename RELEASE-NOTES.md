@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v1.1.1
+# Release Notes - ESP32 Audio Client v1.1.2
 
-Release date: 2026-05-09
+Release date: 2026-05-27
 
 Target hardware:
 
@@ -9,8 +9,9 @@ Target hardware:
 - External I2S DAC
 - PCM Snapserver stream
 
-## [Unreleased]
+## [1.1.2]
 
+- Increased Snapclient effective output level by changing `SNAPCLIENT_OUTPUT_GAIN` from `0.70` to `0.85` and `SNAPCLIENT_FINAL_PCM_GAIN` from `0.50` to `1.00`.
 - Patched Snapclient server-settings handling so volume-only changes no longer trigger a brief silence burst before the new volume is applied.
 - Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop to reduce PCM handoff jitter.
 - Let the Snapclient output task continue draining queued audio after successful writes instead of adding a fixed 1 ms pause per chunk.
@@ -20,21 +21,11 @@ Target hardware:
 
 ## Summary
 
-This release adds the first OTA-capable firmware for the ESP32 Snapclient build. Install this version over USB once, then future compatible firmware builds can be uploaded from SnapControl over the local network.
+This release focuses on Snapclient audio behavior. It raises the Snapclient output level so Wi-Fi/Snapserver playback is much closer to Bluetooth loudness, while preserving some upstream headroom with `SNAPCLIENT_OUTPUT_GAIN = 0.85`.
 
-The normal audio behavior is intended to remain unchanged from the previous Snapclient PCM build.
+It also patches the Snapclient server-settings path so ordinary volume changes no longer call the mute handler and inject a short burst of silence. Volume changes should now apply without the brief dropout that was heard before.
 
-This patch also prevents a reboot loop when Snapclient mode cannot connect to Wi-Fi at startup. The device now stays up, retries periodically, and logs whether the configured SSID can be seen.
-
-Release workflow builds now require `SNAP_WIFI_SSID` and `SNAP_WIFI_PASSWORD` GitHub Actions secrets. This prevents published firmware artifacts from accidentally using the placeholder `secrets.example.h` credentials.
-
-This release also removes the Snapclient playback-idle restart behavior. The device may now sit powered on with no active Snapserver playback without rebooting. The project name reported to companion apps is now `ESP32 Audio Client`; build numbers remain available through `version` and `firmwareVersion`.
-
-The Snapclient/Wi-Fi LED now mirrors the Bluetooth waiting behavior: it blinks while connecting to Wi-Fi and stays solid once connected.
-
-This release adds a persisted power-source setting for battery-powered and mains-powered devices. Companion apps can now switch a deployed device between `battery` and `mains` over the local API, and `/api/status` reports whether battery UI should be shown.
-
-This release also adds a low-battery warning output on `GPIO14` for the red RGB LED channel. When a battery-powered device reaches `20%` or lower, the firmware alternates once per second between the active mode LED and the red low-battery LED.
+The release also includes the previously queued Snapclient scheduling and documentation cleanups from `Unreleased`: the output-drain task gets priority over the network loop, successful output writes no longer sleep for a fixed 1 ms, and disabled PCM stats no longer scan the hot path.
 
 ## What This Firmware Does
 
@@ -50,7 +41,7 @@ SnapControl, the companion iOS app, can use the local HTTP API while the device 
 - show battery voltage/percentage when battery sensing is wired and enabled
 - change local output routing between stereo, left-to-both, and right-to-both
 - save the Bluetooth device name used on later Bluetooth-mode boots
-- upload future firmware `.bin` builds over OTA after this release has first been installed by USB
+- upload compatible firmware `.bin` builds over OTA
 
 Bluetooth mode does not expose the local HTTP API. App control and OTA update are Snapclient/Wi-Fi-mode features.
 
@@ -95,39 +86,32 @@ Hardware notes:
 
 ## Highlights
 
-- Added local OTA firmware upload support in Snapclient mode.
-- Added `POST /api/firmware` for raw PlatformIO `.bin` app-image uploads.
-- Added OTA discovery fields to `GET /api/status`.
-- Added Wi-Fi startup failure diagnostics and retry without reboot.
-- Changed GitHub release firmware builds to require real Wi-Fi credentials from repository secrets.
-- Removed playback-idle restarts when no audio is playing.
-- Changed the reported project name to `ESP32 Audio Client` without embedding hardware or firmware version text.
-- Changed the Snapclient/Wi-Fi LED to blink while connecting and stay solid once connected.
-- Added a saved `battery` / `mains` power-source setting.
-- Added `power_source` and `capabilities.power_source` to `/api/status`.
-- Added `POST /api/power-source` for companion apps.
-- Suppressed battery voltage/percentage reporting when `power_source` is `mains`.
-- Added red low-battery warning output on `GPIO14` at `20%` or lower.
-- Alternated the low-battery warning LED with the active mode LED once per second.
-- Kept channel routing, Bluetooth-name control, battery reporting, and existing Snapclient behavior available through the local API.
-- Kept USB flashing as the required recovery path.
+- Raised Snapclient effective gain from `0.35` to `0.85` of full-scale before Snapserver volume is applied.
+- Removed the Snapclient volume-change dropout caused by calling the mute path on volume-only server settings.
+- Kept true mute/unmute handling intact when Snapserver actually changes mute state.
+- Reduced Snapclient PCM handoff jitter by prioritizing the output-drain task and removing the fixed post-write delay.
+- Kept channel routing, Bluetooth-name control, battery reporting, OTA upload, and existing Snapclient API behavior available.
 
-## Changes Since v1.1.0
+## Changes Since v1.1.1
 
-- Added a low-battery warning LED on `GPIO14` for the red RGB LED channel.
-- Alternated the active mode LED and red low-battery LED once per second when battery percentage is `20%` or lower.
-- Kept the low-battery LED disabled for `mains` power source mode.
+- Changed `SNAPCLIENT_OUTPUT_GAIN` from `0.70` to `0.85`.
+- Changed `SNAPCLIENT_FINAL_PCM_GAIN` from `0.50` to `1.00`.
+- Patched Snapclient server-settings handling so volume-only changes no longer trigger a brief silence burst.
+- Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop.
+- Removed the extra 1 ms output-task delay after successful queued PCM writes.
+- Stopped hot-path PCM peak/stat scans when periodic audio stats are disabled.
+- Clarified portable local build/release documentation links and ignored macOS `.DS_Store` metadata files.
 
 ## Firmware Version
 
-- Previous version: `1.1.0`
-- New version: `1.1.1`
+- Previous version: `1.1.1`
+- New version: `1.1.2`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.1.1`
-- `firmwareVersion`: `1.1.1`
+- `version`: `1.1.2`
+- `firmwareVersion`: `1.1.2`
 
 Versioning policy:
 
@@ -139,7 +123,7 @@ Versioning policy:
 
 ## OTA Update Workflow
 
-First install this release by USB flashing.
+Install this release by OTA from an OTA-capable build such as `1.1.1`, or by USB flashing if the device is on an older build or needs recovery.
 
 After this release is running on the ESP32:
 
@@ -190,7 +174,8 @@ Successful response:
 
 ## Important Notes
 
-- This release must be flashed over USB before OTA updates can be used.
+- OTA can be used from an existing OTA-capable firmware build.
+- USB flashing is required for first install, recovery, or devices running firmware without OTA support.
 - OTA updates cannot change the partition table or bootloader.
 - USB recovery is still required if Wi-Fi, Snapclient mode, or the OTA endpoint stops working.
 - OTA upload is intended for trusted local-network use only.
@@ -206,17 +191,19 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `1.1.1` build output size is comfortably below the OTA slot limit:
+The current `1.1.2` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
-- Built firmware image: about `1921728` bytes
+- Built firmware image: `1917521` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.1.1` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.1.1`.
+- Flash `1.1.2` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.1.2`.
 - Confirm `GET /api/status` reports `project` as `ESP32 Audio Client`.
-- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.1` after Wi-Fi connects.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.2` after Wi-Fi connects.
+- Confirm Snapclient volume changes apply without a brief audio dropout.
+- Confirm Snapclient output level is closer to Bluetooth than the previous firmware while avoiding obvious clipping on loud tracks.
 - Confirm `GET /api/status` reports `power_source`.
 - Confirm `POST /api/power-source` accepts `battery` and `mains` and persists after reboot.
 - Confirm `power_source: "mains"` reports `battery.available: false`.

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-27
+
+- Increased Snapclient effective output level by changing `SNAPCLIENT_OUTPUT_GAIN` from `0.70` to `0.85` and `SNAPCLIENT_FINAL_PCM_GAIN` from `0.50` to `1.00`.
 - Patched Snapclient server-settings handling so volume-only changes no longer trigger a silence burst through the mute path.
 - Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop so queued PCM gets handed to I2S with less scheduling jitter.
 - Removed the extra 1 ms output-task delay after successful queued PCM writes, allowing the task to drain available audio chunks continuously.
