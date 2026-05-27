@@ -11,6 +11,7 @@ Target hardware:
 
 ## [Unreleased]
 
+- Patched Snapclient server-settings handling so volume-only changes no longer trigger a brief silence burst before the new volume is applied.
 - Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop to reduce PCM handoff jitter.
 - Let the Snapclient output task continue draining queued audio after successful writes instead of adding a fixed 1 ms pause per chunk.
 - Disabled hot-path PCM peak/stat scans while periodic audio stats are off.
