@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v1.1.2
+# Release Notes - ESP32 Audio Client v1.1.3
 
-Release date: 2026-05-27
+Release date: 2026-06-10
 
 Target hardware:
 
@@ -9,23 +9,17 @@ Target hardware:
 - External I2S DAC
 - PCM Snapserver stream
 
-## [1.1.2]
+## [1.1.3]
 
-- Increased Snapclient effective output level by changing `SNAPCLIENT_OUTPUT_GAIN` from `0.70` to `0.85` and `SNAPCLIENT_FINAL_PCM_GAIN` from `0.50` to `1.00`.
-- Patched Snapclient server-settings handling so volume-only changes no longer trigger a brief silence burst before the new volume is applied.
-- Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop to reduce PCM handoff jitter.
-- Let the Snapclient output task continue draining queued audio after successful writes instead of adding a fixed 1 ms pause per chunk.
-- Disabled hot-path PCM peak/stat scans while periodic audio stats are off.
-- Clarified local build and release documentation so VS Code links and OTA firmware paths are portable across Windows, macOS, and Linux.
-- Ignored macOS `.DS_Store` metadata files so local VS Code work does not add release-noise files.
+- Changed the Snapclient PCM stream profile from `48000:16:2` to `44100:16:2`.
+- Aligned the firmware default with 44.1 kHz librespot and Snapserver sources to avoid unnecessary 44.1 kHz to 48 kHz conversion in the normal Spotify/Snapcast path.
+- Updated Snapserver setup documentation, API examples, OTA contract examples, and visible firmware version fields for `1.1.3`.
 
 ## Summary
 
-This release focuses on Snapclient audio behavior. It raises the Snapclient output level so Wi-Fi/Snapserver playback is much closer to Bluetooth loudness, while preserving some upstream headroom with `SNAPCLIENT_OUTPUT_GAIN = 0.85`.
+This release aligns the ESP32 Snapclient firmware with a 44.1 kHz PCM Snapserver path. That matches common librespot/Spotify output and keeps the server, Snapcast stream, firmware fallback format, and I2S startup format on the same sample rate.
 
-It also patches the Snapclient server-settings path so ordinary volume changes no longer call the mute handler and inject a short burst of silence. Volume changes should now apply without the brief dropout that was heard before.
-
-The release also includes the previously queued Snapclient scheduling and documentation cleanups from `Unreleased`: the output-drain task gets priority over the network loop, successful output writes no longer sleep for a fixed 1 ms, and disabled PCM stats no longer scan the hot path.
+The PCM decoder can still apply the stream format from Snapcast's WAV wrapper, but the firmware default and documented server profile now match the intended `44100:16:2` deployment.
 
 ## What This Firmware Does
 
@@ -86,32 +80,27 @@ Hardware notes:
 
 ## Highlights
 
-- Raised Snapclient effective gain from `0.35` to `0.85` of full-scale before Snapserver volume is applied.
-- Removed the Snapclient volume-change dropout caused by calling the mute path on volume-only server settings.
-- Kept true mute/unmute handling intact when Snapserver actually changes mute state.
-- Reduced Snapclient PCM handoff jitter by prioritizing the output-drain task and removing the fixed post-write delay.
+- Changed Snapclient PCM playback from a 48 kHz default to a 44.1 kHz default.
+- Matched the documented Snapserver `sampleformat` to the expected firmware profile.
+- Kept Bluetooth mode's existing 44.1 kHz default and source-rate update behavior unchanged.
 - Kept channel routing, Bluetooth-name control, battery reporting, OTA upload, and existing Snapclient API behavior available.
 
-## Changes Since v1.1.1
+## Changes Since v1.1.2
 
-- Changed `SNAPCLIENT_OUTPUT_GAIN` from `0.70` to `0.85`.
-- Changed `SNAPCLIENT_FINAL_PCM_GAIN` from `0.50` to `1.00`.
-- Patched Snapclient server-settings handling so volume-only changes no longer trigger a brief silence burst.
-- Raised the Snapclient RTOS output-drain task priority above the Snapclient network loop.
-- Removed the extra 1 ms output-task delay after successful queued PCM writes.
-- Stopped hot-path PCM peak/stat scans when periodic audio stats are disabled.
-- Clarified portable local build/release documentation links and ignored macOS `.DS_Store` metadata files.
+- Changed `AUDIO_SAMPLE_RATE` from `48000` to `44100`.
+- Updated Snapserver examples from `48000:16:2` to `44100:16:2`.
+- Updated visible firmware version examples from `1.1.2` to `1.1.3`.
 
 ## Firmware Version
 
-- Previous version: `1.1.1`
-- New version: `1.1.2`
+- Previous version: `1.1.2`
+- New version: `1.1.3`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.1.2`
-- `firmwareVersion`: `1.1.2`
+- `version`: `1.1.3`
+- `firmwareVersion`: `1.1.3`
 
 Versioning policy:
 
@@ -123,7 +112,7 @@ Versioning policy:
 
 ## OTA Update Workflow
 
-Install this release by OTA from an OTA-capable build such as `1.1.1`, or by USB flashing if the device is on an older build or needs recovery.
+Install this release by OTA from an OTA-capable build such as `1.1.2`, or by USB flashing if the device is on an older build or needs recovery.
 
 After this release is running on the ESP32:
 
@@ -191,19 +180,20 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `1.1.2` build output size is comfortably below the OTA slot limit:
+The current `1.1.3` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
-- Built firmware image: `1917521` bytes
+- Built firmware image: `1924096` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.1.2` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.1.2`.
+- Flash `1.1.3` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.1.3`.
 - Confirm `GET /api/status` reports `project` as `ESP32 Audio Client`.
-- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.2` after Wi-Fi connects.
-- Confirm Snapclient volume changes apply without a brief audio dropout.
-- Confirm Snapclient output level is closer to Bluetooth than the previous firmware while avoiding obvious clipping on loud tracks.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.3` after Wi-Fi connects.
+- Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=pcm`.
+- Confirm boot logs report the Snapclient/I2S format as `44100 Hz, 16-bit, 2 ch`.
+- Confirm normal Snapclient audio behavior still works without obvious pitch, speed, crackle, or buffering artifacts.
 - Confirm `GET /api/status` reports `power_source`.
 - Confirm `POST /api/power-source` accepts `battery` and `mains` and persists after reboot.
 - Confirm `power_source: "mains"` reports `battery.available: false`.
@@ -214,7 +204,6 @@ The current `1.1.2` build output size is comfortably below the OTA slot limit:
 - Leaving the device powered on with no active audio should not trigger a playback-idle reboot.
 - Confirm `ota_supported` is `true`.
 - Confirm `capabilities.firmware_update` is `true`.
-- Confirm normal Snapclient audio behavior still works.
 - Confirm channel routing still works.
 - Confirm Bluetooth-name saving still works.
 - Upload a known-good future `firmware.bin` through SnapControl.

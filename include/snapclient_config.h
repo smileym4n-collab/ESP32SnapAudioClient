@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.1.2
+  Version: 1.1.3
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.1.2"
+#define APP_FIRMWARE_VERSION "1.1.3"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.1.2"
+#define APP_FIRMWARE_VERSION_TAG "v1.1.3"
 #endif
 
 #if __has_include("secrets.h")
@@ -105,7 +105,7 @@ static constexpr uint32_t MODE_LED_LOW_BATTERY_CYCLE_MS = 1000;
 
 // ---------- Audio format ----------
 // Keep this aligned with the Snapserver PCM stream profile and the external DAC.
-static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
+static constexpr uint32_t AUDIO_SAMPLE_RATE = 44100;
 static constexpr uint8_t AUDIO_BITS_PER_SAMPLE = 16;
 static constexpr uint8_t AUDIO_CHANNELS = 2;
 

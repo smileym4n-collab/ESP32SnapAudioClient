@@ -7,18 +7,18 @@ This project's **Snapclient mode** now expects a **PCM** Snapserver stream on an
 Use these settings for the stream this client connects to:
 
 - codec: `pcm`
-- sample format: `48000:16:2`
+- sample format: `44100:16:2`
 
 That means:
 
-- 48000 Hz
+- 44100 Hz
 - 16-bit samples
 - 2 channels
 
 ## Example `snapserver.conf` source line
 
 ```ini
-source = pipe:///tmp/snapfifo?name=ESP32_WROVER_V9&sampleformat=48000:16:2&codec=pcm
+source = pipe:///tmp/snapfifo?name=ESP32_WROVER_V9&sampleformat=44100:16:2&codec=pcm
 ```
 
 ## Why this build uses PCM
@@ -41,7 +41,7 @@ sudo systemctl restart snapserver
 
 - PCM uses more network bandwidth than Opus
 - Wi-Fi quality still matters even with larger client-side buffers
-- this build still expects a `48000:16:2` playback profile
+- this build expects a `44100:16:2` playback profile
 
 ## Bring-up recommendations
 

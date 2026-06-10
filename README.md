@@ -1,6 +1,6 @@
 # ESP32 Audio Client
 
-Version: **1.1.2**
+Version: **1.1.3**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 
@@ -230,7 +230,7 @@ Snapclient mode is now intended for a **PCM** stream on this ESP32-WROVER build.
 Recommended stream settings:
 
 - codec: `pcm`
-- sample format: `48000:16:2`
+- sample format: `44100:16:2`
 
 See [snapserver.md](docs/snapserver.md) for a concrete example.
 

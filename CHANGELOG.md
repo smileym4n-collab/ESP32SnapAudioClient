@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-06-10
+
+- Changed the Snapclient PCM stream profile from `48000:16:2` to `44100:16:2` so the firmware default matches 44.1 kHz librespot and Snapserver sources.
+- Updated the Snapserver setup documentation, API examples, OTA contract examples, and visible firmware version fields for `1.1.3`.
+
 ## [1.1.2] - 2026-05-27
 
 - Increased Snapclient effective output level by changing `SNAPCLIENT_OUTPUT_GAIN` from `0.70` to `0.85` and `SNAPCLIENT_FINAL_PCM_GAIN` from `0.50` to `1.00`.
