@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-06-13
+
+- Quiesce the Snapclient audio pipeline when an OTA firmware upload starts: the music fades out quickly, then the decode and network tasks are stopped and I2S is flushed, so the flash write and HTTP upload get an idle device instead of competing with Opus decode and the Snapcast stream for CPU and Wi-Fi. This makes OTA updates far more reliable while music is playing. If an OTA fails after audio was stopped, the device reboots to recover playback (the update does not commit, so it stays on the current firmware).
+- Removed the unused optional I2S MCLK support and its `board_config.h` settings. The firmware never drives an MCLK pin; PCM5102-style DACs derive their clocks from BCLK.
+- Cleaned up the repository documentation for sharing: rewrote the README to be friendlier and better structured, removed MCLK references throughout, and aligned the visible firmware version fields across the docs.
+- Updated visible firmware version fields and release documentation for `1.3.1`.
+
 ## [1.3.0] - 2026-06-13
 
 - Fixed Snapclient channel routing: `stereo` / `left` / `right` now actually re-routes the decoded audio. The setting was previously saved and reported over the API but never applied, because the Snapclient output wrote straight to the I2S stream and bypassed the routing path. Routing now runs in the final PCM output probe, so `POST /api/channel-mode` takes effect immediately with no reboot.

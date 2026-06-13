@@ -13,10 +13,6 @@ namespace {
 constexpr uint16_t kFullScaleGainQ15 = 32767;
 constexpr size_t kGainBufferBytes = 256;
 
-int configuredMclkPin() {
-  return board_config::I2S_MCLK_ENABLED ? board_config::I2S_MCLK_PIN : -1;
-}
-
 uint16_t sanitizedDmaBufferSize(uint16_t requestedSize) {
   constexpr uint16_t kMinI2sDmaBufferSize = 8;
   constexpr uint16_t kMaxI2sDmaBufferSize = 1024;
@@ -87,11 +83,6 @@ bool AudioOutputController::begin(uint32_t sampleRate,
                 board_config::I2S_BCLK_PIN,
                 board_config::I2S_LRCLK_PIN,
                 board_config::I2S_DOUT_PIN);
-  if (board_config::I2S_MCLK_ENABLED) {
-    Serial.printf("[i2s] mclk=enabled on GPIO%d\n", board_config::I2S_MCLK_PIN);
-  } else {
-    Serial.println("[i2s] mclk=disabled");
-  }
   Serial.printf("[i2s] dma=%u x %u bytes, apll=%s\n",
                 dmaBufferCount,
                 dmaBufferSize,
@@ -311,7 +302,7 @@ void AudioOutputController::fillConfig(I2SConfig &cfg,
   cfg.pin_bck = board_config::I2S_BCLK_PIN;
   cfg.pin_ws = board_config::I2S_LRCLK_PIN;
   cfg.pin_data = board_config::I2S_DOUT_PIN;
-  cfg.pin_mck = configuredMclkPin();
+  cfg.pin_mck = -1;  // no MCLK; PCM5102-style DACs derive their clocks from BCLK
   cfg.buffer_count = dmaBufferCount;
   cfg.buffer_size = sanitizedDmaBufferSize(dmaBufferSize);
   cfg.use_apll = app_config::I2S_USE_AUDIO_PLL;

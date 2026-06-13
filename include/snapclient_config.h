@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.3.0
+  Version: 1.3.1
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.3.0"
+#define APP_FIRMWARE_VERSION "1.3.1"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.3.0"
+#define APP_FIRMWARE_VERSION_TAG "v1.3.1"
 #endif
 
 #if __has_include("secrets.h")
@@ -65,6 +65,13 @@ static constexpr uint16_t CONTROL_API_PORT = 8080;
 static constexpr bool OTA_FIRMWARE_UPDATE_ENABLED = true;
 static constexpr size_t OTA_PARTITION_HEADROOM_BYTES = 4096;
 static constexpr uint32_t OTA_REBOOT_DELAY_MS = 500;
+// When an OTA upload starts, fade the Snapclient audio to silence over this
+// window and then stop the decode/network tasks, so the flash and HTTP upload
+// are not fighting Opus decode and the Snapcast stream for CPU and Wi-Fi.
+static constexpr uint32_t OTA_AUDIO_FADE_MS = 100;
+// Wait this long after starting the fade before stopping playback, so the ramp
+// reaches the DAC and the I2S DMA (~128 ms deep) drains cleanly first.
+static constexpr uint32_t OTA_AUDIO_QUIESCE_DELAY_MS = 220;
 
 // ---------- Battery monitor ----------
 // Hardware divider: battery positive -> R_TOP -> ADC pin -> R_BOTTOM -> GND.

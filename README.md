@@ -1,287 +1,168 @@
 # ESP32 Audio Client
 
-Version: **1.3.0**
+Firmware that turns an **ESP32-WROVER** + external I2S DAC into a dual-mode audio
+receiver:
 
-This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, switches Snapclient to **Opus-compressed Snapcast transport**, and keeps the Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
+- a **synchronized Snapcast speaker** (multi-room audio over Wi-Fi, Opus transport), or
+- a **standalone Bluetooth speaker** (A2DP sink).
 
-Firmware versioning starts at `v1.0.0`. The canonical firmware version is stored in [VERSION](VERSION), injected into PlatformIO builds, reported by `GET /api/status`, printed at boot, and used for the Snapserver-visible Snapclient hello version.
+It boots into Snapcast mode and you flip to Bluetooth (and back) with a single
+button press. Both modes share the same I2S DAC output path.
 
-Default behavior after this change:
+Version: **1.3.1**
 
-- **cold boot always starts in Snapclient mode**
-- **press the mode button while running to reboot into Bluetooth mode**
-- **MCLK is disabled by default**
-- **Snapclient mode exposes `Stereo`, `Left`, and `Right` channel routing**
-- **Snapclient mode exposes a local OTA firmware upload endpoint for prebuilt `.bin` app images**
-- **Snapclient mode exposes a saved `battery` / `mains` power-source setting for companion apps**
-- **Snapclient/Wi-Fi LED blinks while connecting and stays solid once connected**
-- **Low battery warning uses the red RGB LED channel on `GPIO14` at 20% or below**
-- **Snapclient mode retries Wi-Fi startup failures without rebooting continuously**
+## Features
 
-That default suits many common **PCM5102-style DAC modules**, which usually do not require a separate MCLK line.
+- **Two modes, one device** — Snapcast client over Wi-Fi, or Bluetooth A2DP sink.
+- **Opus Snapcast transport** — compressed audio keeps playback stable on weaker
+  ESP32 Wi-Fi, decoded to 48 kHz PCM on-device.
+- **Channel routing** — play `stereo`, or fold `left`/`right` to both DAC channels
+  (great for using one board as a mono left or right speaker in a stereo pair).
+- **Companion-app HTTP API** — a small local API on port `8080` for controls
+  Snapserver doesn't expose (channel routing, power source, Bluetooth name, OTA).
+- **OTA firmware updates** — push a new build over the local network; audio fades
+  out and the pipeline quiesces first so the update lands reliably.
+- **Battery monitoring** — optional 4S pack voltage and estimated percentage.
+- **Status LEDs** — separate Wi-Fi, Bluetooth, and low-battery indicators.
 
 ## Target hardware
 
-- Module: **ESP32-WROVER-IE-N16R8**
-- Flash / PSRAM target: **16 MB flash / 8 MB PSRAM**
-- Audio output: external I2S DAC only
-- On-chip DAC: not used
-- Antenna: external antenna version of WROVER-IE
+- Module: **ESP32-WROVER-IE-N16R8** (16 MB flash / 8 MB PSRAM, external antenna)
+- Audio output: an **external I2S DAC** (e.g. a PCM5102-style module)
+- The on-chip DAC is not used.
+
+PSRAM is required — it backs the larger audio buffers used for Wi-Fi jitter
+resistance.
 
 ## Pin map
 
-Edit hardware assignments in [board_config.h](include/board_config.h).
+All hardware assignments live in [board_config.h](include/board_config.h).
 
 | Function | GPIO | Notes |
 | --- | --- | --- |
 | I2S BCLK | `GPIO26` | External DAC bit clock |
 | I2S LRCLK / WS | `GPIO25` | External DAC word select |
 | I2S DOUT | `GPIO13` | External DAC serial data input |
-| I2S MCLK | `GPIO0` | Optional only, used only when `I2S_MCLK_ENABLED = true` |
-| SENSE | `GPIO34` | Battery divider ADC input, configurable in `board_config.h` |
-| Mode button | `GPIO23` | Runtime momentary mode-toggle button, active low with internal pull-up |
-| Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status LED, active low for common-anode RGB wiring |
-| BT LED | `GPIO33` | Bluetooth status LED, active low for common-anode RGB wiring |
-| Low battery LED | `GPIO14` | Red low-battery warning LED, active low for common-anode RGB wiring |
+| Battery SENSE | `GPIO34` | 4S battery divider ADC input (ADC1) |
+| Mode button | `GPIO23` | Momentary, active-low, internal pull-up |
+| Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status, active-low common-anode |
+| Bluetooth LED | `GPIO33` | Bluetooth status, active-low common-anode |
+| Low-battery LED | `GPIO14` | Red low-battery warning, active-low common-anode |
 
-## MCLK configuration
+No MCLK line is used — PCM5102-style DACs generate their own clocks from BCLK.
+If your LEDs are wired as GPIO → resistor → LED → GND instead of common-anode,
+flip the matching `*_ACTIVE_HIGH` flag in `board_config.h`.
 
-MCLK is now controlled entirely from [board_config.h](include/board_config.h).
+## Quick start
 
-Edit these fields:
+1. Copy the secrets template and add your Wi-Fi credentials:
 
-- `I2S_MCLK_ENABLED`
-- `I2S_MCLK_PIN`
+   ```bash
+   cp include/secrets.example.h include/secrets.h
+   # edit include/secrets.h — it is gitignored, keep it local
+   ```
 
-### Default setting
+2. Build, flash, and watch the serial log:
 
-```cpp
-static constexpr bool I2S_MCLK_ENABLED = false;
-static constexpr int I2S_MCLK_PIN = 0;
-```
+   ```bash
+   pio run
+   pio run -t upload
+   pio device monitor -b 115200
+   ```
 
-What that means:
+3. Point the device at your Snapserver by editing `snapServerIp()` in
+   [snapclient_config.h](include/snapclient_config.h), and set up an Opus stream
+   on the server — see [docs/snapserver.md](docs/snapserver.md).
 
-- by default, the firmware does **not** drive an MCLK pin
-- `GPIO0` is **not used by default**
-- the shared I2S setup passes **no MCLK pin** to the driver when MCLK is disabled
+The build uses PlatformIO's `default_16MB.csv` partition table, which provides
+two OTA app slots.
 
-### For common PCM5102 builds
+## How it works
 
-For many PCM5102-based modules, leave:
+### Snapclient mode (default)
 
-- `I2S_MCLK_ENABLED = false`
+Cold boot always starts here. The device joins Wi-Fi as a station, connects to
+Snapserver, decodes the Opus stream to 48 kHz PCM, and plays it through the I2S
+DAC. A deep compressed buffer absorbs Wi-Fi jitter, and the local control API
+comes up on port `8080`.
 
-That keeps wiring simpler and avoids using `GPIO0`.
-
-### For DACs that require MCLK
-
-If your DAC explicitly requires MCLK:
-
-- set `I2S_MCLK_ENABLED = true`
-- set `I2S_MCLK_PIN` to the pin you want to use
-
-Current ESP32 caveat:
-
-- classic ESP32 only supports I2S MCLK on **GPIO0**, **GPIO1**, or **GPIO3**
-
-Practical recommendation:
-
-- `GPIO0` is the least disruptive default here because `GPIO1` and `GPIO3` are UART0
-- but `GPIO0` is also a boot-strapping pin, so the DAC must not pull it low during reset
-
-## Mode button behavior
-
-The mode button is a **runtime mode-toggle button**, not a boot selector.
-
-Actual behavior:
-
-- power-up / cold boot: **Snapclient mode**
-- while running in Snapclient: press button -> store Bluetooth request -> reboot -> **Bluetooth mode**
-- while running in Bluetooth: press button -> store Snapclient request -> reboot -> **Snapclient mode**
-
-The runtime mode button logic is handled in [mode_switch_controller.cpp](src/mode_switch_controller.cpp).
-
-Important detail:
-
-- the firmware ignores a button that is already held during startup
-- it waits for an initial release before arming the runtime press detection
-- this prevents the button from acting like a boot-time selector
-
-Recommended wiring for the mode button:
-
-- connect one side of the push button to `GPIO23`
-- connect the other side to `GND`
-- the firmware enables the internal pull-up, so no external pull-up is required for the default arrangement
-
-If you do not have the button connected yet, you can also switch modes from the serial monitor:
-
-- send `b` to reboot into **Bluetooth** mode
-- send `s` to reboot into **Snapclient** mode
-- send `t` to toggle to the opposite mode
-- send `?` to print the help line again
-
-## Status LED behavior
-
-The status LED behavior is intentionally simple:
-
-- **Snapclient mode**: Wi-Fi LED on `GPIO32` **blinks while connecting** and is **solid ON once Wi-Fi is connected**
-- **Bluetooth mode**: BT LED on `GPIO33` **blinks while waiting for a source** and is **solid ON once a Bluetooth client is connected**
-- **Low battery**: red LED on `GPIO14` alternates once per second with the active mode LED when battery mode is selected and the battery estimate is `20%` or lower
-
-The LED logic is implemented in [mode_led_controller.cpp](src/mode_led_controller.cpp).
-
-Recommended default LED wiring:
-
-- connect the RGB LED common anode to `3V3`
-- connect the Wi-Fi LED cathode through a resistor to `GPIO32`
-- connect the BT LED cathode through a resistor to `GPIO33`
-- connect the red low-battery LED cathode through a resistor to `GPIO14`
-- this matches the default active-low common-anode configuration
-
-If any LED is wired as GPIO -> resistor -> LED -> GND, change `WIFI_STATUS_LED_ACTIVE_HIGH`, `BT_STATUS_LED_ACTIVE_HIGH`, or `LOW_BATTERY_LED_ACTIVE_HIGH` to `true` in [board_config.h](include/board_config.h).
-
-## SnapApp control API
-
-Snapclient mode exposes a small local HTTP API on port `8080` for controls that Snapserver does not provide directly.
-
-- `GET /api/status` returns firmware identity, `firmwareVersion`, runtime mode, power source, current channel mode, battery status, and capabilities.
-- `POST /api/channel-mode` accepts `{"channel_mode":"stereo"}`, `{"channel_mode":"left"}`, or `{"channel_mode":"right"}`.
-- `POST /api/power-source` accepts `{"power_source":"battery"}` or `{"power_source":"mains"}` and saves whether companion apps should show battery UI.
-- `POST /api/bluetooth-name` accepts `{"bluetooth_name":"CoolCube Kitchen"}` and saves the name for later Bluetooth-mode boots.
-- `POST /api/firmware` accepts a raw PlatformIO firmware `.bin` app image for OTA update when OTA support is reported by `/api/status`.
-
-Channel routing applies only in Snapclient mode:
-
-- `stereo`: left DAC channel plays left, right DAC channel plays right
-- `left`: both DAC channels play the left input channel
-- `right`: both DAC channels play the right input channel
-
-The selected channel mode is saved in ESP32 preferences and restored on later Snapclient boots. Bluetooth mode ignores this setting and remains a simple single-speaker receiver.
-
-The Bluetooth name setting is also saved in ESP32 preferences, but it is only read when Bluetooth mode starts.
-
-OTA firmware updates are intended for trusted local-network use. First-time OTA enablement, partition-table changes, bootloader recovery, and recovery from broken Wi-Fi or a broken OTA endpoint still require USB flashing.
-
-See [API.md](API.md) for the companion-app API reference and [control-api.md](docs/control-api.md) for request and response examples.
-
-## Battery monitor
-
-The Snapclient board can report a 4S lithium pack voltage and estimated percentage through `/api/status`.
-
-The power source can be changed at runtime through `POST /api/power-source` and
-is saved in ESP32 preferences, so it survives reboots and OTA updates. Use
-`battery` for boards with the voltage divider fitted and `mains` for boards that
-should hide battery UI in companion apps.
-
-Default hardware assumption:
-
-- battery positive -> `270k` resistor -> ADC-capable sense input -> `47k` resistor -> `GND`
-- a full 4S Li-ion pack at `16.8V` produces about `2.49V` at the ADC pin
-
-The current board pinout sets `BATTERY_SENSE_PIN` to `GPIO34` for the board SENSE input. `GPIO34` is ADC1-capable and input-only, which suits the battery divider output while Wi-Fi is active.
-
-## Configuration files
-
-- [snapclient_config.h](include/snapclient_config.h) - Snapserver address, Bluetooth device name, runtime tuning, mode-switch timing, and visible version values
-- [secrets.example.h](include/secrets.example.h) - template for the local `include/secrets.h` Wi-Fi credentials file
-- [board_config.h](include/board_config.h) - all user-editable hardware pin assignments, including optional MCLK control and battery sense input
-- [src/audio_output_controller.cpp](src/audio_output_controller.cpp) - shared I2S output setup for both Snapclient and Bluetooth modes, including the single MCLK enable/disable decision
-- [src/main.cpp](src/main.cpp) - boot log, PSRAM setup, runtime mode setup, and LED initialization
-- [src/boot_mode_selector.cpp](src/boot_mode_selector.cpp) - boot-time mode resolution for cold boot vs requested software restart
-- [src/mode_switch_controller.cpp](src/mode_switch_controller.cpp) - runtime button press detection, debounce, mode toggle request, and reboot
-- [src/mode_led_controller.cpp](src/mode_led_controller.cpp) - Wi-Fi, Bluetooth, and low-battery status LED behavior
-- [src/snapclient_mode.cpp](src/snapclient_mode.cpp) - Wi-Fi Snapclient mode
-- [src/bluetooth_mode.cpp](src/bluetooth_mode.cpp) - Bluetooth A2DP sink mode
-- [API.md](API.md) - compact companion-app API reference
-- [docs/control-api.md](docs/control-api.md) - local companion-app HTTP API
-- [docs/snapserver.md](docs/snapserver.md) - Snapserver-side recommendations
-
-## Firmware behavior
-
-### Snapclient mode
-
-- this is the normal cold-boot default path
-- connects to Wi-Fi as a station
-- starts the existing Snapclient transport path
-- expects an **Opus** Snapserver stream
-- uses compressed transport buffering suited to weaker ESP32 Wi-Fi links
-- enables PSRAM-backed allocation for larger buffers
-- uses `OpusAudioDecoder` to decode Snapcast Opus packets to 48 kHz stereo PCM locally
-- logs the Snapserver format, RTOS queue fill, and decoded PCM activity on the real output path
-- keeps Snapclient on a gently clamped dynamic-sync playback mode
-- runs the Snapclient network/decode loop on its own RTOS task again, matching the earlier stable bench profile more closely
-- keeps periodic Snapclient PCM/buffer stat logs disabled by default during live playback testing so only startup and fault lines remain
-- keeps a deep compressed Snapclient queue cushion and re-buffers when the live fill falls too low, preferring a short refill pause over sustained jittery playback
-- restarts on Wi-Fi loss instead of trying to continue in a bad state
+Expected Snapserver stream: `codec=opus`, `sampleformat=44100:16:2`. See
+[docs/snapserver.md](docs/snapserver.md) for a worked example and the recommended
+`buffer` setting.
 
 ### Bluetooth mode
 
-- entered after a runtime mode-button press and reboot
-- disables Wi-Fi and starts a Bluetooth A2DP sink only
-- advertises as `CoolCube` by default
-- writes received stereo audio to the same external I2S DAC path
-- updates the I2S sample rate if the Bluetooth source changes it
+Entered after a mode-button press and reboot. Wi-Fi is disabled and the device
+becomes a Bluetooth A2DP sink, advertising as `CoolCube` by default, writing
+received audio to the same I2S DAC. Bluetooth mode is a simple connect-and-play
+stereo receiver and does not use the control API or channel routing.
 
-## Snapserver recommendations
+### Switching modes
 
-Snapclient mode is now intended for an **Opus** stream on this ESP32-WROVER test build.
+The mode button is a runtime toggle, not a boot selector:
 
-Recommended stream settings:
+- power-up / cold boot → **Snapclient mode**
+- press while running → store the other mode, reboot into it
 
-- codec: `opus`
-- sample format: `44100:16:2`
+During bring-up you can also switch from the serial monitor: send `b` for
+Bluetooth, `s` for Snapclient, `t` to toggle, or `?` for help.
 
-See [snapserver.md](docs/snapserver.md) for a concrete example.
+### Status LEDs
 
-Practical recommendations:
+- **Snapclient:** Wi-Fi LED blinks while connecting, solid once connected.
+- **Bluetooth:** BT LED blinks while waiting for a source, solid once connected.
+- **Low battery:** the red LED alternates with the active-mode LED once per second
+  when running on battery at or below 20%.
 
-- keep the Snapserver on wired Ethernet if possible
-- keep the ESP32 on strong 2.4 GHz Wi-Fi
-- avoid testing initial bring-up on a congested access point
+## Companion-app control API
 
-## Snapclient codec note
+Snapclient mode exposes a local HTTP API on port `8080`:
 
-This build deliberately tests the compressed Opus Snapcast path.
+- `GET /api/status` — firmware identity, mode, power source, channel mode,
+  battery, and capabilities.
+- `POST /api/channel-mode` — `{"channel_mode":"stereo"|"left"|"right"}`.
+- `POST /api/power-source` — `{"power_source":"battery"|"mains"}`.
+- `POST /api/bluetooth-name` — `{"bluetooth_name":"CoolCube Kitchen"}`.
+- `POST /api/firmware` — raw `.bin` app image for OTA update.
 
-Why:
+Channel mode and power source are saved in flash and restored on later boots.
+The Bluetooth name is saved and applied the next time the device boots into
+Bluetooth mode.
 
-- Bluetooth playback is already clean on the same shared I2S/DAC path
-- PCM transport still drops out when ESP32 Wi-Fi signal is anything less than very strong
-- Opus transport should reduce Wi-Fi bandwidth substantially while preserving the same I2S output path
-- Opus decode outputs 48 kHz PCM locally on the ESP32
+See [API.md](API.md) for the compact reference and
+[docs/control-api.md](docs/control-api.md) for full request/response examples.
 
-## Build / flash
+OTA updates are intended for trusted local-network use. First-time setup,
+partition-table changes, and recovery from a broken Wi-Fi config still require a
+USB flash.
 
-The project defaults to the WROVER target in `platformio.ini`.
+## Battery monitor
 
-The default build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots for the firmware update endpoint.
+The board can report a 4S lithium pack voltage and estimated percentage through
+`/api/status`. The default divider is battery+ → `270k` → ADC pin → `47k` → GND,
+which reads about `2.49 V` at the pin for a full `16.8 V` pack. Set the power
+source to `mains` (via the API) to hide battery UI in companion apps. Details and
+tuning constants are in [snapclient_config.h](include/snapclient_config.h).
 
-Before building for the first time, copy `include/secrets.example.h` to
-`include/secrets.h` and set your local Wi-Fi SSID and password. Keep
-`include/secrets.h` out of git.
+## Configuration files
 
-```bash
-cd ESP32SnapAudioClient
-pio run
-pio run -t upload
-pio device monitor -b 115200
-```
+| File | Purpose |
+| --- | --- |
+| [include/secrets.example.h](include/secrets.example.h) | Template for your local `include/secrets.h` Wi-Fi credentials |
+| [include/board_config.h](include/board_config.h) | Hardware pin assignments and LED/battery options |
+| [include/snapclient_config.h](include/snapclient_config.h) | Snapserver address, audio format, buffering and runtime tuning |
 
-If you want to call the environment explicitly:
+## Documentation
 
-```bash
-pio run -e esp32-wrover-ie-n16r8
-```
+- [docs/snapserver.md](docs/snapserver.md) — Snapserver stream setup
+- [docs/control-api.md](docs/control-api.md) — full companion-app API reference
+- [API.md](API.md) — compact API reference
+- [CHANGELOG.md](CHANGELOG.md) — versioned change history
+- [RELEASE-NOTES.md](RELEASE-NOTES.md) — current release notes
 
-## Limitations and caveats
+## Limitations
 
-- mode changes are done by **software reboot**, not by hot-swapping the stacks live
-- only one audio mode is active per boot
-- Bluetooth mode does not talk to Snapserver at all
-- Snapclient mode still depends on Wi-Fi, but Opus uses much less network bandwidth than PCM
-- when MCLK is enabled, classic ESP32 routing is limited and `GPIO0` needs careful reset-time wiring
-
-## Change history
-
-See [CHANGELOG.md](CHANGELOG.md) for versioned change notes.
+- Mode changes happen by software reboot; only one audio mode is active per boot.
+- Bluetooth mode does not talk to Snapserver and ignores channel routing.
+- Snapclient mode depends on Wi-Fi; keep the ESP32 on strong 2.4 GHz signal and,
+  where possible, the Snapserver on wired Ethernet.

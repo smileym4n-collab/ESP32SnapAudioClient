@@ -24,6 +24,15 @@ class AudioProbeStream : public audio_tools::AudioStream {
     controller_ = controller;
   }
 
+  // Starts a linear fade-out of the Snapclient PCM over durationMs, applied by
+  // the decode task as it keeps writing. Used to quiet the output before an OTA
+  // flash so the update is not fighting the audio pipeline for CPU and Wi-Fi.
+  void beginFadeOut(uint32_t durationMs) {
+    fadeStartMs_ = millis();
+    fadeDurationMs_ = durationMs > 0 ? durationMs : 1;
+    fadeActive_ = true;  // set last so the decode task sees consistent fields
+  }
+
   bool begin() override {
     // The shared I2S output is started by AudioOutputController before
     // Snapclient begins. Re-opening it here can force a second DMA allocation
@@ -92,19 +101,21 @@ class AudioProbeStream : public audio_tools::AudioStream {
         channelMode != app_config::ChannelMode::Stereo &&
         info.bits_per_sample == 16 && info.channels == 2 &&
         len >= sizeof(int16_t) * 2;
-    const bool applyGain = shouldApplyGain(len);
+    const float gain = effectiveGain();
+    const bool scaleSamples =
+        gain < 0.999f && info.bits_per_sample == 16 && len >= sizeof(int16_t);
 
     const uint8_t *writeData = data;
     size_t writeLen = len;
-    if (routeChannels || applyGain) {
+    if (routeChannels || scaleSamples) {
       processBuffer_.resize(len);
       if (routeChannels) {
         app_config::routeStereo16(channelMode, data, len, processBuffer_.data());
       } else {
         memcpy(processBuffer_.data(), data, len);
       }
-      if (applyGain) {
-        applyGainInPlace(processBuffer_.data(), processBuffer_.size());
+      if (scaleSamples) {
+        applyScalar(processBuffer_.data(), processBuffer_.size(), gain);
       }
       writeData = processBuffer_.data();
       writeLen = processBuffer_.size();
@@ -129,6 +140,9 @@ class AudioProbeStream : public audio_tools::AudioStream {
   float pcmGain_ = 1.0f;
   bool periodicStatsEnabled_ = true;
   uint8_t firstWriteLogsRemaining_ = 3;
+  bool fadeActive_ = false;
+  uint32_t fadeStartMs_ = 0;
+  uint32_t fadeDurationMs_ = 1;
 
   static uint16_t maxAbsPcm16(const uint8_t *buffer, size_t size) {
     const size_t sampleCount = size / sizeof(int16_t);
@@ -184,17 +198,27 @@ class AudioProbeStream : public audio_tools::AudioStream {
     --firstWriteLogsRemaining_;
   }
 
-  bool shouldApplyGain(size_t size) const {
-    return pcmGain_ > 0.0f && pcmGain_ < 0.999f &&
-           info.bits_per_sample == 16 && size >= sizeof(int16_t);
+  // Combined gain for this write: the configured final PCM trim multiplied by
+  // the current fade-out envelope (1.0 when not fading, ramping to 0.0).
+  float effectiveGain() const {
+    float gain = (pcmGain_ > 0.0f && pcmGain_ < 1.0f) ? pcmGain_ : 1.0f;
+    if (fadeActive_) {
+      const uint32_t elapsed = millis() - fadeStartMs_;
+      const float fade = elapsed >= fadeDurationMs_
+                             ? 0.0f
+                             : 1.0f - static_cast<float>(elapsed) /
+                                          static_cast<float>(fadeDurationMs_);
+      gain *= fade;
+    }
+    return gain;
   }
 
-  void applyGainInPlace(uint8_t *buffer, size_t size) {
+  void applyScalar(uint8_t *buffer, size_t size, float gain) {
     int16_t *samples = reinterpret_cast<int16_t *>(buffer);
     const size_t sampleCount = size / sizeof(int16_t);
 
     for (size_t i = 0; i < sampleCount; ++i) {
-      const float scaled = static_cast<float>(samples[i]) * pcmGain_;
+      const float scaled = static_cast<float>(samples[i]) * gain;
       if (scaled > 32767.0f) {
         samples[i] = 32767;
       } else if (scaled < -32768.0f) {

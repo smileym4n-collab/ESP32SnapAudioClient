@@ -44,6 +44,7 @@ class SnapclientMode : public RuntimeMode {
   void handleSetPowerSource();
   void handleFirmwareUploadRaw();
   void handleFirmwareUploadComplete();
+  void quiesceAudioForOta();
   void failFirmwareUpload(int statusCode,
                           const char *error,
                           const char *message);

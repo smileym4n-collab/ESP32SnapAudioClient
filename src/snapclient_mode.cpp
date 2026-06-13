@@ -263,7 +263,7 @@ void SnapclientMode::loop() {
 
   if (otaRebootPending_ &&
       static_cast<int32_t>(millis() - otaRestartAtMs_) >= 0) {
-    Serial.println("[ota] rebooting into accepted firmware");
+    Serial.println("[ota] rebooting to apply or recover firmware");
     prepareForRestart();
     delay(app_config::OTA_REBOOT_DELAY_MS);
     ESP.restart();
@@ -741,6 +741,7 @@ void SnapclientMode::handleFirmwareUploadRaw() {
           static_cast<unsigned long>(otaExpectedSize_),
           static_cast<unsigned long>(otaPartitionSize_),
           filename.length() > 0 ? filename.c_str() : "-");
+      quiesceAudioForOta();
       break;
     }
 
@@ -858,6 +859,14 @@ void SnapclientMode::failFirmwareUpload(int statusCode,
                 otaMessage_.c_str(),
                 static_cast<unsigned long>(otaWritten_),
                 static_cast<unsigned long>(otaExpectedSize_));
+
+  if (restartPrepared_) {
+    // Audio was already quiesced for the flash, so the device is silent and the
+    // snap tasks are stopped. The update did not commit, so the bootloader keeps
+    // the current firmware - reboot to recover playback cleanly.
+    Serial.println("[ota] audio was stopped for flashing; scheduling recovery reboot");
+    scheduleFirmwareRestart();
+  }
 }
 
 void SnapclientMode::scheduleFirmwareRestart() {
@@ -867,4 +876,20 @@ void SnapclientMode::scheduleFirmwareRestart() {
 
   otaRebootPending_ = true;
   otaRestartAtMs_ = millis() + app_config::OTA_REBOOT_DELAY_MS;
+}
+
+void SnapclientMode::quiesceAudioForOta() {
+  if (restartPrepared_) {
+    return;
+  }
+
+  // Fade the music out, then stop the decode/network tasks and flush I2S so the
+  // flash write and HTTP upload get an idle device. The decode task applies the
+  // fade as it keeps writing; the delay lets it ramp down and the DMA drain
+  // before the tasks are stopped, so the stop is click-free.
+  Serial.println("[ota] fading out audio before flashing");
+  pcmProbe_.beginFadeOut(app_config::OTA_AUDIO_FADE_MS);
+  delay(app_config::OTA_AUDIO_QUIESCE_DELAY_MS);
+  prepareForRestart();
+  Serial.println("[ota] audio stopped; receiving firmware on an idle device");
 }

@@ -1,13 +1,12 @@
 /*
   Project: ESP32 audio client (SnapApp channel control API)
-  Version: 1.3.0
+  Version: 1.3.1
   Framework: Arduino (PlatformIO)
 
   Pin map (ESP32-WROVER-IE-N16R8 -> external I2S DAC):
     GPIO26 -> I2S BCLK
     GPIO25 -> I2S LRCLK / WS
     GPIO13 -> I2S DOUT
-    GPIO0  -> Optional I2S MCLK when enabled in board_config.h
     GPIO34 -> SENSE / battery voltage divider input
     GPIO23 -> Runtime mode-toggle button (active low with internal pull-up)
     GPIO32 -> Wi-Fi/Snapclient status LED (active low, common-anode RGB)
@@ -20,8 +19,6 @@
   - Snapclient mode exposes a local HTTP control API on port 8080.
   - Snapclient mode blinks the Wi-Fi LED while connecting and keeps it solid once connected.
   - Bluetooth mode blinks the BT LED while waiting for a source.
-  - MCLK is optional and disabled by default for PCM5102-style builds.
-  - Classic ESP32 MCLK routing is limited to GPIO0/GPIO1/GPIO3 when enabled.
   - Wi-Fi and Snapserver settings are in include/snapclient_config.h.
   - Hardware pin assignments are in include/board_config.h.
 */
