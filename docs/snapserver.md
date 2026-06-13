@@ -17,6 +17,40 @@ That means the source FIFO is:
 
 Snapserver will encode that source to Opus for transport, and the ESP32 decodes Opus to 48 kHz PCM for I2S output.
 
+## Sample rates: why 44.1 kHz in but 48 kHz out
+
+Opus only supports 48/24/16/12/8 kHz - it has no 44.1 kHz mode. So the `44100` in
+the profile above is just the **source FIFO** rate (what librespot/Spotify feeds
+in). Snapserver resamples that up to 48 kHz before Opus encoding, which it logs as:
+
+```text
+Resampling input from 44100:16:2 to 48000:16:2 as required by Opus
+```
+
+So the full chain is:
+
+```text
+Spotify / librespot (44.1 kHz)
+  -> Snapserver resample to 48 kHz
+  -> Opus encode @ 48 kHz
+  -> Wi-Fi
+  -> ESP32 Opus decode
+  -> 48 kHz PCM
+  -> I2S DAC
+```
+
+The ESP32 therefore always plays at **48 kHz** in Opus mode. You can confirm it in
+the device serial log:
+
+```text
+[snapclient-pcm] format=48000 Hz, 16-bit, 2 ch
+[i2s] format update=48000 Hz, 16-bit, 2 ch
+```
+
+Note: earlier PCM-transport builds ran the client at 44.1 kHz end to end. Moving to
+Opus changed the on-device rate to 48 kHz - the 44.1 kHz now lives only on the
+server's input side.
+
 ## Example `snapserver.conf` source line
 
 ```ini
