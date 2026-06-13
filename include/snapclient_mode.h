@@ -67,6 +67,7 @@ class SnapclientMode : public RuntimeMode {
   TaskHandle_t snapTaskHandle_ = nullptr;
   volatile bool snapTaskRunning_ = false;
   uint32_t lastWifiCheckMs_ = 0;
+  uint8_t wifiLossStreak_ = 0;
   uint32_t otaRestartAtMs_ = 0;
   size_t otaExpectedSize_ = 0;
   size_t otaWritten_ = 0;

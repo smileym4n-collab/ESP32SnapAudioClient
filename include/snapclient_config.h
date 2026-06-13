@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.2.1
+  Version: 1.3.0
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.2.1"
+#define APP_FIRMWARE_VERSION "1.3.0"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.2.1"
+#define APP_FIRMWARE_VERSION_TAG "v1.3.0"
 #endif
 
 #if __has_include("secrets.h")
@@ -53,6 +53,10 @@ static constexpr uint32_t SNAP_WIFI_CONNECT_TIMEOUT_MS = 20000;
 static constexpr uint32_t SNAP_WIFI_RETRY_DELAY_MS = 500;
 static constexpr uint32_t SNAP_WIFI_MONITOR_INTERVAL_MS = 1000;
 static constexpr uint32_t SNAP_WIFI_STARTUP_RETRY_INTERVAL_MS = 30000;
+// Consecutive 1 s Wi-Fi monitor checks that must fail before Snapclient mode
+// falls back to a full restart. Lets a brief link blip recover (the stack
+// auto-reconnects) instead of rebooting and dropping ~seconds of playback.
+static constexpr uint8_t SNAP_WIFI_LOSS_GRACE_CHECKS = 5;
 
 // ---------- Local control API ----------
 // Used by companion apps for ESP32-specific controls that Snapserver does not
@@ -129,11 +133,15 @@ static constexpr uint32_t AUDIO_MODE_CHANGE_MUTE_RAMP_MS = 35;
 static constexpr uint32_t SNAP_OUTPUT_QUEUE_BYTES = 131072;
 // Start once a useful compressed-audio cushion has accumulated.
 static constexpr uint8_t SNAP_OUTPUT_ACTIVATION_PERCENT = 20;
-// If the live queue falls under this threshold, pause output briefly so the
-// FIFO/Wi-Fi path can rebuild a healthier cushion instead of juddering through.
-static constexpr uint8_t SNAP_OUTPUT_REBUFFER_START_PERCENT = 10;
-// Resume output only once the queue has climbed back to this safer level.
-static constexpr uint8_t SNAP_OUTPUT_REBUFFER_RESUME_PERCENT = 40;
+// In steady state this compressed queue only holds about `buffer_ms` worth of
+// Opus (the server streams ~real-time, a few % of the queue), so rebuffer must
+// only fire on a genuine near-empty - not on the normal operating fill. Trip
+// it low (~0.4 s of audio) and resume just above the steady-state level so a
+// refill is a short blip, not the multi-second silence a high resume target
+// would force (the server can't hand over several seconds at once).
+static constexpr uint8_t SNAP_OUTPUT_REBUFFER_START_PERCENT = 5;
+// Resume output once the queue has climbed back just above steady state.
+static constexpr uint8_t SNAP_OUTPUT_REBUFFER_RESUME_PERCENT = 15;
 // Prefer a short refill pause over playing through an underrun as distortion.
 static constexpr bool SNAPCLIENT_REBUFFER_ENABLED = true;
 // Keep a little headroom for hot Spotify/librespot material and Snapclient's
@@ -159,7 +167,12 @@ static constexpr uint32_t CPU_FREQ_MHZ = 240;
 static constexpr uint32_t SERIAL_BAUD = 115200;
 static constexpr uint32_t MAIN_LOOP_DELAY_MS = 1;
 static constexpr bool SNAP_USE_FAST_LOOP = true;
-static constexpr BaseType_t SNAPCLIENT_TASK_CORE = 1;
+// The Opus decode/output task is pinned to core 1 by the Snapclient library, so
+// run the network receive loop on core 0 (alongside the Wi-Fi/LwIP stack). That
+// dedicates core 1 to Opus decode + I2S and stops packet receive from preempting
+// decode - the cause of the periodic short play/pause stutter on the shared core.
+// Revert to 1 if bench testing shows core 0 starving the receive loop.
+static constexpr BaseType_t SNAPCLIENT_TASK_CORE = 0;
 static constexpr UBaseType_t SNAPCLIENT_TASK_PRIORITY = 5;
 static constexpr uint32_t SNAPCLIENT_TASK_STACK_WORDS = 8192;
 static constexpr uint32_t SNAPCLIENT_TASK_DELAY_MS = 0;

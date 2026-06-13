@@ -114,6 +114,7 @@ SnapclientMode::SnapclientMode()
                        app_config::SNAPCLIENT_MAX_PLAYBACK_FACTOR,
                        app_config::SNAPCLIENT_UNITY_DEADBAND) {
   pcmProbe_.setPcmGain(app_config::SNAPCLIENT_FINAL_PCM_GAIN);
+  pcmProbe_.setChannelController(&audioOutput_);
   pcmProbe_.setPeriodicStatsEnabled(app_config::SNAPCLIENT_PERIODIC_STATS_ENABLED);
   snapProcessor_->setPeriodicStatsEnabled(
       app_config::SNAPCLIENT_PERIODIC_STATS_ENABLED);
@@ -273,11 +274,26 @@ void SnapclientMode::loop() {
   if (nowMs - lastWifiCheckMs_ >= app_config::SNAP_WIFI_MONITOR_INTERVAL_MS) {
     lastWifiCheckMs_ = nowMs;
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("[wifi] link lost, restarting...");
-      logDiagnosticSnapshot("wifi-link-lost");
-      prepareForRestart();
-      delay(app_config::RESTART_DELAY_MS);
-      ESP.restart();
+      // Don't nuke playback on a single missed beacon. Give the stack a few
+      // monitor intervals (and an explicit reconnect nudge) to recover before
+      // falling back to a full restart.
+      ++wifiLossStreak_;
+      if (wifiLossStreak_ == 1) {
+        Serial.println("[wifi] link down, waiting for auto-reconnect...");
+        WiFi.reconnect();
+      }
+      if (wifiLossStreak_ >= app_config::SNAP_WIFI_LOSS_GRACE_CHECKS) {
+        Serial.printf("[wifi] link lost for %u checks, restarting...\n",
+                      static_cast<unsigned>(wifiLossStreak_));
+        logDiagnosticSnapshot("wifi-link-lost");
+        prepareForRestart();
+        delay(app_config::RESTART_DELAY_MS);
+        ESP.restart();
+      }
+    } else if (wifiLossStreak_ > 0) {
+      Serial.printf("[wifi] link recovered after %u checks\n",
+                    static_cast<unsigned>(wifiLossStreak_));
+      wifiLossStreak_ = 0;
     }
   }
 

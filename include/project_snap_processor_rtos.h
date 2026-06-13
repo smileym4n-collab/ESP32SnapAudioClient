@@ -48,6 +48,9 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
     const bool started = snap_arduino::SnapProcessorRTOS::begin();
 
     if (started) {
+      // Reserve the consume-side scratch buffer up front so the first large
+      // chunk does not trigger a malloc inside the audio copy task.
+      chunkBuffer_.reserve(kChunkBufferReserveBytes);
       Serial.printf("[snapclient-buf] byte_queue=%lu activation=%d slots=%d\n",
                     static_cast<unsigned long>(buffer.size()),
                     bufferTaskActivationLimit(),
@@ -113,6 +116,24 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
       return size;
     }
 
+    // Keep size_queue and the byte buffer in lockstep: only commit a chunk if
+    // the whole thing fits. A partial writeArray() would leave size_queue
+    // claiming more bytes than were stored, desyncing every later chunk
+    // boundary and feeding the Opus decoder garbage. Drop the chunk cleanly
+    // instead - one lost packet is a brief glitch; a desync corrupts the
+    // stream until restart.
+    const int freeBytes = static_cast<int>(buffer.size()) - buffer.available();
+    if (freeBytes <= static_cast<int>(size)) {
+      ++bufferOverflowCount_;
+      Serial.printf("[snapclient-buf] overflow-drop chunk=%lu free=%d fill=%d/%lu\n",
+                    static_cast<unsigned long>(size),
+                    freeBytes,
+                    buffer.available(),
+                    static_cast<unsigned long>(buffer.size()));
+      maybeLogRuntime("overflow", true);
+      return 0;
+    }
+
     size_t queuedSize = size;
     if (!size_queue.enqueue(queuedSize)) {
       ++queueFullCount_;
@@ -126,6 +147,8 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
 
     const size_t sizeWritten = buffer.writeArray(data, static_cast<int>(size));
     if (sizeWritten != size) {
+      // Unreachable now that free space is checked up front, but keep the
+      // counter so a regression in the buffer implementation stays visible.
       ++bufferOverflowCount_;
       Serial.printf("[snapclient-buf] overflow chunk=%lu wrote=%lu fill=%d/%lu\n",
                     static_cast<unsigned long>(size),
@@ -152,6 +175,10 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
   }
 
  private:
+  // Typical Opus wire chunks are well under this; sized to cover a few packets
+  // so the consume task never reallocates mid-stream after warmup.
+  static constexpr size_t kChunkBufferReserveBytes = 4096;
+
   std::vector<uint8_t> chunkBuffer_;
   uint32_t lastLogMs_ = 0;
   uint32_t lastActivityMs_ = 0;

@@ -20,8 +20,19 @@ Snapserver will encode that source to Opus for transport, and the ESP32 decodes 
 ## Example `snapserver.conf` source line
 
 ```ini
+[stream]
+buffer = 2000
 source = pipe:///tmp/snapfifo_spotify?name=Spotify&sampleformat=44100:16:2&codec=opus&chunk_ms=20
 ```
+
+### About `buffer`
+
+`buffer` (end-to-end latency, in ms) is the **master jitter cushion** for the
+whole system. The ESP32's compressed queue only ever holds about this much audio
+in steady state, so a generous value here does more for dropout resistance than
+any client-side tuning. `2000` ms is a good starting point for music over Wi-Fi;
+raise it if you still see dropouts at weaker signal, lower it only if you need
+tighter sync. It does not affect Bluetooth mode.
 
 ## Why this branch uses Opus
 

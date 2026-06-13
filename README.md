@@ -1,6 +1,6 @@
 # ESP32 Audio Client
 
-Version: **1.2.1**
+Version: **1.3.0**
 
 This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, switches Snapclient to **Opus-compressed Snapcast transport**, and keeps the Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 

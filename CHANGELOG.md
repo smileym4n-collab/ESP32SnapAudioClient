@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-13
+
+- Fixed Snapclient channel routing: `stereo` / `left` / `right` now actually re-routes the decoded audio. The setting was previously saved and reported over the API but never applied, because the Snapclient output wrote straight to the I2S stream and bypassed the routing path. Routing now runs in the final PCM output probe, so `POST /api/channel-mode` takes effect immediately with no reboot.
+- Moved the Snapclient network receive task to core 0 so the Opus decode/output task (pinned to core 1 by the Snapclient library) gets a dedicated core. This targets the periodic short play/pause stutter caused by packet receive preempting Opus decode on the shared core.
+- Hardened the compressed Snapclient queue against byte-buffer overflow: an oversized chunk is now dropped whole instead of being partially written, keeping the size queue and byte buffer in lockstep rather than desyncing Opus frame boundaries.
+- Retuned the Snapclient rebuffer thresholds from `10% -> 40%` to `5% -> 15%` so a low-buffer refill is a short blip instead of a multi-second silence the higher resume target could force.
+- Added a Wi-Fi loss grace period: Snapclient mode now waits up to five 1 s monitor checks (and nudges an explicit reconnect) before falling back to a restart, so a brief link blip no longer reboots the device mid-playback.
+- Reserved the consume-side chunk buffer up front to avoid a mid-stream allocation in the audio copy task.
+- Removed unused PCM-era code (`SnapcastPcmDecoder`, `PcmProbePrint`) left over from before the Opus transport switch.
+- Left the Bluetooth A2DP -> I2S output path unchanged.
+- Updated visible firmware version fields and release documentation for `1.3.0`.
+
 ## [1.2.1] - 2026-06-13
 
 - Raised the Snapclient network receive task priority above the Opus decode/output task so compressed packets keep filling while audio is decoded.

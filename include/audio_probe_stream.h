@@ -1,10 +1,14 @@
 #pragma once
 
+#include <string.h>
+
 #include <vector>
 
 #include <Arduino.h>
 
 #include "AudioTools.h"
+#include "audio_output_controller.h"
+#include "channel_mode.h"
 
 class AudioProbeStream : public audio_tools::AudioStream {
  public:
@@ -12,6 +16,13 @@ class AudioProbeStream : public audio_tools::AudioStream {
 
   void setPcmGain(float gain) { pcmGain_ = gain; }
   void setPeriodicStatsEnabled(bool enabled) { periodicStatsEnabled_ = enabled; }
+
+  // Source of truth for the active Snapclient channel routing. The probe reads
+  // the live mode on every write, so POST /api/channel-mode takes effect
+  // immediately without a reboot. Left null = stereo passthrough.
+  void setChannelController(AudioOutputController *controller) {
+    controller_ = controller;
+  }
 
   bool begin() override {
     // The shared I2S output is started by AudioOutputController before
@@ -74,14 +85,29 @@ class AudioProbeStream : public audio_tools::AudioStream {
       return 0;
     }
 
+    const app_config::ChannelMode channelMode =
+        controller_ != nullptr ? controller_->channelMode()
+                               : app_config::ChannelMode::Stereo;
+    const bool routeChannels =
+        channelMode != app_config::ChannelMode::Stereo &&
+        info.bits_per_sample == 16 && info.channels == 2 &&
+        len >= sizeof(int16_t) * 2;
+    const bool applyGain = shouldApplyGain(len);
+
     const uint8_t *writeData = data;
     size_t writeLen = len;
-    if (shouldApplyGain(len)) {
-      prepareGainBuffer(data, len);
-      if (!gainBuffer_.empty()) {
-        writeData = gainBuffer_.data();
-        writeLen = gainBuffer_.size();
+    if (routeChannels || applyGain) {
+      processBuffer_.resize(len);
+      if (routeChannels) {
+        app_config::routeStereo16(channelMode, data, len, processBuffer_.data());
+      } else {
+        memcpy(processBuffer_.data(), data, len);
       }
+      if (applyGain) {
+        applyGainInPlace(processBuffer_.data(), processBuffer_.size());
+      }
+      writeData = processBuffer_.data();
+      writeLen = processBuffer_.size();
     }
 
     const size_t written = target_->write(writeData, writeLen);
@@ -95,7 +121,8 @@ class AudioProbeStream : public audio_tools::AudioStream {
 
  private:
   audio_tools::AudioStream *target_ = nullptr;
-  std::vector<uint8_t> gainBuffer_;
+  AudioOutputController *controller_ = nullptr;
+  std::vector<uint8_t> processBuffer_;
   uint32_t windowStartMs_ = millis();
   uint32_t windowBytes_ = 0;
   uint16_t windowPeak_ = 0;
@@ -162,26 +189,20 @@ class AudioProbeStream : public audio_tools::AudioStream {
            info.bits_per_sample == 16 && size >= sizeof(int16_t);
   }
 
-  void prepareGainBuffer(const uint8_t *buffer, size_t size) {
-    gainBuffer_.resize(size);
-    const int16_t *src = reinterpret_cast<const int16_t *>(buffer);
-    int16_t *dst = reinterpret_cast<int16_t *>(gainBuffer_.data());
+  void applyGainInPlace(uint8_t *buffer, size_t size) {
+    int16_t *samples = reinterpret_cast<int16_t *>(buffer);
     const size_t sampleCount = size / sizeof(int16_t);
 
     for (size_t i = 0; i < sampleCount; ++i) {
-      const float scaled = static_cast<float>(src[i]) * pcmGain_;
+      const float scaled = static_cast<float>(samples[i]) * pcmGain_;
       if (scaled > 32767.0f) {
-        dst[i] = 32767;
+        samples[i] = 32767;
       } else if (scaled < -32768.0f) {
-        dst[i] = -32768;
+        samples[i] = -32768;
       } else {
-        dst[i] = static_cast<int16_t>(scaled);
+        samples[i] = static_cast<int16_t>(scaled);
       }
     }
-
-    const size_t remainderOffset = sampleCount * sizeof(int16_t);
-    for (size_t i = remainderOffset; i < size; ++i) {
-      gainBuffer_[i] = buffer[i];
-    }
+    // A trailing odd byte (not a full 16-bit sample) is left unchanged.
   }
 };
