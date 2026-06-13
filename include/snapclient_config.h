@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.1.3
+  Version: 1.1.4
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.1.3"
+#define APP_FIRMWARE_VERSION "1.1.4"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.1.3"
+#define APP_FIRMWARE_VERSION_TAG "v1.1.4"
 #endif
 
 #if __has_include("secrets.h")
@@ -124,20 +124,18 @@ static constexpr uint32_t AUDIO_UNMUTE_RAMP_MS = 35;
 static constexpr uint32_t AUDIO_MODE_CHANGE_MUTE_RAMP_MS = 35;
 
 // ---------- Buffering / stability ----------
-// Keep enough PCM buffering for Wi-Fi jitter without waiting so long that
-// playback starts on stale data.
-static constexpr uint32_t SNAP_OUTPUT_QUEUE_BYTES = 65536;
+// Keep enough PCM buffering for Wi-Fi jitter. At 44.1 kHz stereo 16-bit PCM,
+// this is roughly 740 ms of audio before Snapclient queue overhead.
+static constexpr uint32_t SNAP_OUTPUT_QUEUE_BYTES = 131072;
 // Let the output task wait for a deeper PCM cushion before it starts draining.
-static constexpr uint8_t SNAP_OUTPUT_ACTIVATION_PERCENT = 75;
+static constexpr uint8_t SNAP_OUTPUT_ACTIVATION_PERCENT = 85;
 // If the live queue falls under this threshold, pause output briefly so the
 // FIFO/Wi-Fi path can rebuild a healthier cushion instead of juddering through.
-static constexpr uint8_t SNAP_OUTPUT_REBUFFER_START_PERCENT = 55;
+static constexpr uint8_t SNAP_OUTPUT_REBUFFER_START_PERCENT = 35;
 // Resume output only once the queue has climbed back to this safer level.
-static constexpr uint8_t SNAP_OUTPUT_REBUFFER_RESUME_PERCENT = 75;
-// Hard stop-and-refill rebuffering was useful for diagnosis, but on this PCM
-// path it can create audible step changes. Leave it off when dynamic sync is
-// active so the resampler can absorb small drift more gracefully.
-static constexpr bool SNAPCLIENT_REBUFFER_ENABLED = false;
+static constexpr uint8_t SNAP_OUTPUT_REBUFFER_RESUME_PERCENT = 80;
+// Prefer a short refill pause over playing through an underrun as distortion.
+static constexpr bool SNAPCLIENT_REBUFFER_ENABLED = true;
 // Keep a little headroom for hot Spotify/librespot PCM and Snapclient's
 // resampler so full-scale content does not crunch in the DAC path.
 static constexpr float SNAPCLIENT_OUTPUT_GAIN = 0.85f;

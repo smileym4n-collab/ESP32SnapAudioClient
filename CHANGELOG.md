@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-06-12
+
+- Increased the Snapclient PCM output queue from `65536` bytes to `131072` bytes to provide more Wi-Fi jitter cushion for 44.1 kHz PCM playback.
+- Re-enabled Snapclient rebuffering so low queue fill triggers a short refill pause instead of playing through underruns as distortion.
+- Raised the Snapclient initial activation threshold to `85%` and changed rebuffer thresholds to `35% -> 80%`.
+- Updated visible firmware version fields and release documentation for `1.1.4`.
+
 ## [1.1.3] - 2026-06-10
 
 - Changed the Snapclient PCM stream profile from `48000:16:2` to `44100:16:2` so the firmware default matches 44.1 kHz librespot and Snapserver sources.

@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v1.1.3
+# Release Notes - ESP32 Audio Client v1.1.4
 
-Release date: 2026-06-10
+Release date: 2026-06-12
 
 Target hardware:
 
@@ -9,17 +9,18 @@ Target hardware:
 - External I2S DAC
 - PCM Snapserver stream
 
-## [1.1.3]
+## [1.1.4]
 
-- Changed the Snapclient PCM stream profile from `48000:16:2` to `44100:16:2`.
-- Aligned the firmware default with 44.1 kHz librespot and Snapserver sources to avoid unnecessary 44.1 kHz to 48 kHz conversion in the normal Spotify/Snapcast path.
-- Updated Snapserver setup documentation, API examples, OTA contract examples, and visible firmware version fields for `1.1.3`.
+- Increased the Snapclient PCM output queue from `65536` bytes to `131072` bytes.
+- Re-enabled Snapclient rebuffering so low queue fill triggers a short refill pause instead of playing through underruns as distortion.
+- Raised the Snapclient initial activation threshold to `85%` and changed rebuffer thresholds to `35% -> 80%`.
+- Updated visible firmware version fields and release documentation for `1.1.4`.
 
 ## Summary
 
-This release aligns the ESP32 Snapclient firmware with a 44.1 kHz PCM Snapserver path. That matches common librespot/Spotify output and keeps the server, Snapcast stream, firmware fallback format, and I2S startup format on the same sample rate.
+This release focuses on reducing audible Snapclient dropouts after the move to a 44.1 kHz PCM stream. It gives the ESP32 a deeper PCM queue, waits for more audio before starting playback, and restores low-fill rebuffering so the firmware prefers a short refill pause over distorted playback during an underrun.
 
-The PCM decoder can still apply the stream format from Snapcast's WAV wrapper, but the firmware default and documented server profile now match the intended `44100:16:2` deployment.
+The stream profile remains `44100:16:2` PCM.
 
 ## What This Firmware Does
 
@@ -80,27 +81,30 @@ Hardware notes:
 
 ## Highlights
 
-- Changed Snapclient PCM playback from a 48 kHz default to a 44.1 kHz default.
-- Matched the documented Snapserver `sampleformat` to the expected firmware profile.
-- Kept Bluetooth mode's existing 44.1 kHz default and source-rate update behavior unchanged.
+- Increased Snapclient PCM buffering for Wi-Fi jitter tolerance.
+- Re-enabled clean stop-and-refill behavior when the output queue gets low.
+- Kept the 44.1 kHz Snapserver PCM profile from `1.1.3`.
 - Kept channel routing, Bluetooth-name control, battery reporting, OTA upload, and existing Snapclient API behavior available.
 
-## Changes Since v1.1.2
+## Changes Since v1.1.3
 
-- Changed `AUDIO_SAMPLE_RATE` from `48000` to `44100`.
-- Updated Snapserver examples from `48000:16:2` to `44100:16:2`.
-- Updated visible firmware version examples from `1.1.2` to `1.1.3`.
+- Changed `SNAP_OUTPUT_QUEUE_BYTES` from `65536` to `131072`.
+- Changed `SNAP_OUTPUT_ACTIVATION_PERCENT` from `75` to `85`.
+- Changed `SNAP_OUTPUT_REBUFFER_START_PERCENT` from `55` to `35`.
+- Changed `SNAP_OUTPUT_REBUFFER_RESUME_PERCENT` from `75` to `80`.
+- Changed `SNAPCLIENT_REBUFFER_ENABLED` from `false` to `true`.
+- Updated visible firmware version examples from `1.1.3` to `1.1.4`.
 
 ## Firmware Version
 
-- Previous version: `1.1.2`
-- New version: `1.1.3`
+- Previous version: `1.1.3`
+- New version: `1.1.4`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.1.3`
-- `firmwareVersion`: `1.1.3`
+- `version`: `1.1.4`
+- `firmwareVersion`: `1.1.4`
 
 Versioning policy:
 
@@ -112,7 +116,7 @@ Versioning policy:
 
 ## OTA Update Workflow
 
-Install this release by OTA from an OTA-capable build such as `1.1.2`, or by USB flashing if the device is on an older build or needs recovery.
+Install this release by OTA from an OTA-capable build such as `1.1.3`, or by USB flashing if the device is on an older build or needs recovery.
 
 After this release is running on the ESP32:
 
@@ -180,20 +184,22 @@ pio run -e esp32-wrover-ie-n16r8
 
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
-The current `1.1.3` build output size is comfortably below the OTA slot limit:
+The current `1.1.4` build output size is comfortably below the OTA slot limit:
 
 - App slot size: `6553600` bytes
 - Built firmware image: `1924096` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.1.3` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.1.3`.
+- Flash `1.1.4` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.1.4`.
 - Confirm `GET /api/status` reports `project` as `ESP32 Audio Client`.
-- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.3` after Wi-Fi connects.
+- Confirm `GET /api/status` reports `firmwareVersion` as `1.1.4` after Wi-Fi connects.
 - Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=pcm`.
 - Confirm boot logs report the Snapclient/I2S format as `44100 Hz, 16-bit, 2 ch`.
-- Confirm normal Snapclient audio behavior still works without obvious pitch, speed, crackle, or buffering artifacts.
+- Confirm boot logs report `queue=131072 bytes`, `queue activation=85%`, and `rebuffer=35% -> 80%`.
+- Confirm occasional network stalls produce short clean refill pauses rather than distorted underrun audio.
+- Confirm normal Snapclient audio behavior still works without obvious pitch, speed, crackle, or repeated buffering artifacts.
 - Confirm `GET /api/status` reports `power_source`.
 - Confirm `POST /api/power-source` accepts `battery` and `mains` and persists after reboot.
 - Confirm `power_source: "mains"` reports `battery.available: false`.
