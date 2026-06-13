@@ -413,8 +413,12 @@ void SnapclientMode::snapClientTaskLoop() {
   while (snapTaskRunning_) {
     if (WiFi.status() == WL_CONNECTED) {
       snapClient_.doLoop();
+    } else {
+      vTaskDelay(pdMS_TO_TICKS(1));
     }
-    vTaskDelay(pdMS_TO_TICKS(app_config::SNAPCLIENT_TASK_DELAY_MS));
+    if (app_config::SNAPCLIENT_TASK_DELAY_MS > 0) {
+      vTaskDelay(pdMS_TO_TICKS(app_config::SNAPCLIENT_TASK_DELAY_MS));
+    }
   }
   snapTaskHandle_ = nullptr;
 }

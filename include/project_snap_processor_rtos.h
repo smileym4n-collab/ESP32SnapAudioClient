@@ -80,6 +80,13 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
   }
 
  protected:
+  void processExt() override {
+    // The base SnapProcessor adds a 5 ms delay here. With Opus, decoding runs
+    // in the output task, so keep the network loop responsive while still
+    // yielding briefly to lower-priority work.
+    delay(1);
+  }
+
   size_t writeAudio(const uint8_t *data, size_t size) override {
     if (size > buffer.size()) {
       ++chunkTooLargeCount_;

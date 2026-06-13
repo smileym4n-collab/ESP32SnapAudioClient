@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-06-13
+
+- Raised the Snapclient network receive task priority above the Opus decode/output task so compressed packets keep filling while audio is decoded.
+- Lowered the Opus decode/output RTOS task priority from `5` to `4`.
+- Removed the extra fixed 1 ms delay after each Snapclient loop pass and reduced the processor fast-loop yield from 5 ms to 1 ms.
+- Updated visible firmware version fields and release documentation for `1.2.1`.
+
 ## [1.2.0] - 2026-06-13
 
 - Switched Snapclient mode from the project-local PCM decoder to the upstream `OpusAudioDecoder` for compressed Snapcast transport testing.
