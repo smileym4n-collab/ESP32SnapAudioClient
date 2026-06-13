@@ -1,8 +1,8 @@
 # ESP32 Audio Client
 
-Version: **1.1.4**
+Version: **1.2.0**
 
-This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, keeps Snapclient on the project's **PCM** stream handling, and adds a Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
+This revision keeps the **ESP32-WROVER-IE-N16R8** target, keeps **I2S MCLK optional**, switches Snapclient to **Opus-compressed Snapcast transport**, and keeps the Snapclient-mode local HTTP control API for companion apps such as SnapApp. Bluetooth mode remains simple connect-and-play and does not expose or use local channel routing.
 
 Firmware versioning starts at `v1.0.0`. The canonical firmware version is stored in [VERSION](VERSION), injected into PlatformIO builds, reported by `GET /api/status`, printed at boot, and used for the Snapserver-visible Snapclient hello version.
 
@@ -204,15 +204,15 @@ The current board pinout sets `BATTERY_SENSE_PIN` to `GPIO34` for the board SENS
 - this is the normal cold-boot default path
 - connects to Wi-Fi as a station
 - starts the existing Snapclient transport path
-- expects a **PCM** Snapserver stream
-- uses larger buffering suited to the WROVER target
+- expects an **Opus** Snapserver stream
+- uses compressed transport buffering suited to weaker ESP32 Wi-Fi links
 - enables PSRAM-backed allocation for larger buffers
-- uses the project-local `SnapcastPcmDecoder` to handle Snapcast's PCM WAV wrapper cleanly
-- logs the Snapserver PCM header, RTOS queue fill, and decoded PCM activity on the real output path
-- applies the parsed Snapcast PCM header to the live output path and keeps Snapclient on a gently clamped dynamic-sync PCM playback mode
+- uses `OpusAudioDecoder` to decode Snapcast Opus packets to 48 kHz stereo PCM locally
+- logs the Snapserver format, RTOS queue fill, and decoded PCM activity on the real output path
+- keeps Snapclient on a gently clamped dynamic-sync playback mode
 - runs the Snapclient network/decode loop on its own RTOS task again, matching the earlier stable bench profile more closely
 - keeps periodic Snapclient PCM/buffer stat logs disabled by default during live playback testing so only startup and fault lines remain
-- keeps a deeper Snapclient queue cushion and deliberately re-buffers earlier when the live fill falls too low, preferring a short refill pause over sustained jittery playback
+- keeps a deep compressed Snapclient queue cushion and re-buffers when the live fill falls too low, preferring a short refill pause over sustained jittery playback
 - restarts on Wi-Fi loss instead of trying to continue in a bad state
 
 ### Bluetooth mode
@@ -225,11 +225,11 @@ The current board pinout sets `BATTERY_SENSE_PIN` to `GPIO34` for the board SENS
 
 ## Snapserver recommendations
 
-Snapclient mode is now intended for a **PCM** stream on this ESP32-WROVER build.
+Snapclient mode is now intended for an **Opus** stream on this ESP32-WROVER test build.
 
 Recommended stream settings:
 
-- codec: `pcm`
+- codec: `opus`
 - sample format: `44100:16:2`
 
 See [snapserver.md](docs/snapserver.md) for a concrete example.
@@ -242,13 +242,14 @@ Practical recommendations:
 
 ## Snapclient codec note
 
-This build deliberately returns to the project-local PCM path.
+This build deliberately tests the compressed Opus Snapcast path.
 
 Why:
 
 - Bluetooth playback is already clean on the same shared I2S/DAC path
-- the remaining distortion and stop behavior were isolated to the newer Opus-only Snapclient path
-- this repository already contains a custom PCM decoder written for Snapcast's wrapper format, which is the simpler and more reliable option on this ESP32 target
+- PCM transport still drops out when ESP32 Wi-Fi signal is anything less than very strong
+- Opus transport should reduce Wi-Fi bandwidth substantially while preserving the same I2S output path
+- Opus decode outputs 48 kHz PCM locally on the ESP32
 
 ## Build / flash
 
@@ -278,8 +279,7 @@ pio run -e esp32-wrover-ie-n16r8
 - mode changes are done by **software reboot**, not by hot-swapping the stacks live
 - only one audio mode is active per boot
 - Bluetooth mode does not talk to Snapserver at all
-- Snapclient mode still depends on good Wi-Fi even with larger buffering
-- PCM uses more network bandwidth than Opus, so Wi-Fi quality still matters
+- Snapclient mode still depends on Wi-Fi, but Opus uses much less network bandwidth than PCM
 - when MCLK is enabled, classic ESP32 routing is limited and `GPIO0` needs careful reset-time wiring
 
 ## Change history

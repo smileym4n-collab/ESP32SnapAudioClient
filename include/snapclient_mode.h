@@ -6,6 +6,7 @@
 #include <WebServer.h>
 
 #include "AudioTools.h"
+#include "AudioTools/AudioCodecs/CodecOpus.h"
 #include "SnapClient.h"
 
 #include "audio_probe_stream.h"
@@ -13,7 +14,6 @@
 #include "battery_monitor.h"
 #include "project_snap_output.h"
 #include "power_source.h"
-#include "snapcast_pcm_decoder.h"
 #include "snapclient_time_sync.h"
 #include "runtime_mode.h"
 
@@ -59,7 +59,7 @@ class SnapclientMode : public RuntimeMode {
   BatteryMonitor batteryMonitor_;
   WebServer controlServer_;
   AudioProbeStream pcmProbe_;
-  SnapcastPcmDecoder codec_;
+  audio_tools::OpusAudioDecoder codec_;
   ProjectSnapOutput snapOutput_;
   std::unique_ptr<ProjectSnapProcessorRTOS> snapProcessor_;
   snap_arduino::SnapClient snapClient_;

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-13
+
+- Switched Snapclient mode from the project-local PCM decoder to the upstream `OpusAudioDecoder` for compressed Snapcast transport testing.
+- Changed the Snapclient output fallback format to 48 kHz, 16-bit, stereo to match Opus decode output.
+- Retuned the Snapclient compressed transport queue to start at `20%` and rebuffer at `10% -> 40%` while keeping a `131072` byte queue.
+- Updated Snapserver documentation for `codec=opus` with a `44100:16:2` librespot FIFO input profile.
+- Updated visible firmware version fields and release documentation for `1.2.0`.
+
 ## [1.1.4] - 2026-06-12
 
 - Increased the Snapclient PCM output queue from `65536` bytes to `131072` bytes to provide more Wi-Fi jitter cushion for 44.1 kHz PCM playback.

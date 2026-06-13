@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.1.4
+  Version: 1.2.0
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.1.4"
+#define APP_FIRMWARE_VERSION "1.2.0"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.1.4"
+#define APP_FIRMWARE_VERSION_TAG "v1.2.0"
 #endif
 
 #if __has_include("secrets.h")
@@ -104,8 +104,8 @@ static constexpr uint32_t MODE_LED_BLUETOOTH_BLINK_INTERVAL_MS = 250;
 static constexpr uint32_t MODE_LED_LOW_BATTERY_CYCLE_MS = 1000;
 
 // ---------- Audio format ----------
-// Keep this aligned with the Snapserver PCM stream profile and the external DAC.
-static constexpr uint32_t AUDIO_SAMPLE_RATE = 44100;
+// Opus transport is decoded to 48 kHz PCM on the ESP32 output path.
+static constexpr uint32_t AUDIO_SAMPLE_RATE = 48000;
 static constexpr uint8_t AUDIO_BITS_PER_SAMPLE = 16;
 static constexpr uint8_t AUDIO_CHANNELS = 2;
 
@@ -124,20 +124,20 @@ static constexpr uint32_t AUDIO_UNMUTE_RAMP_MS = 35;
 static constexpr uint32_t AUDIO_MODE_CHANGE_MUTE_RAMP_MS = 35;
 
 // ---------- Buffering / stability ----------
-// Keep enough PCM buffering for Wi-Fi jitter. At 44.1 kHz stereo 16-bit PCM,
-// this is roughly 740 ms of audio before Snapclient queue overhead.
+// Keep enough compressed Snapcast buffering for Wi-Fi jitter. With Opus this
+// holds several seconds of transport data without the RAM cost of PCM.
 static constexpr uint32_t SNAP_OUTPUT_QUEUE_BYTES = 131072;
-// Let the output task wait for a deeper PCM cushion before it starts draining.
-static constexpr uint8_t SNAP_OUTPUT_ACTIVATION_PERCENT = 85;
+// Start once a useful compressed-audio cushion has accumulated.
+static constexpr uint8_t SNAP_OUTPUT_ACTIVATION_PERCENT = 20;
 // If the live queue falls under this threshold, pause output briefly so the
 // FIFO/Wi-Fi path can rebuild a healthier cushion instead of juddering through.
-static constexpr uint8_t SNAP_OUTPUT_REBUFFER_START_PERCENT = 35;
+static constexpr uint8_t SNAP_OUTPUT_REBUFFER_START_PERCENT = 10;
 // Resume output only once the queue has climbed back to this safer level.
-static constexpr uint8_t SNAP_OUTPUT_REBUFFER_RESUME_PERCENT = 80;
+static constexpr uint8_t SNAP_OUTPUT_REBUFFER_RESUME_PERCENT = 40;
 // Prefer a short refill pause over playing through an underrun as distortion.
 static constexpr bool SNAPCLIENT_REBUFFER_ENABLED = true;
-// Keep a little headroom for hot Spotify/librespot PCM and Snapclient's
-// resampler so full-scale content does not crunch in the DAC path.
+// Keep a little headroom for hot Spotify/librespot material and Snapclient's
+// Opus decode/resampler path so full-scale content does not crunch in the DAC path.
 static constexpr float SNAPCLIENT_OUTPUT_GAIN = 0.85f;
 // Final safety trim applied to the actual Snapclient PCM samples immediately
 // before they are handed to I2S. This does not affect Bluetooth mode.

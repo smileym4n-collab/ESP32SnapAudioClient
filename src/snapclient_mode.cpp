@@ -121,7 +121,6 @@ SnapclientMode::SnapclientMode()
   snapProcessor_->setRebufferThresholds(
       app_config::SNAP_OUTPUT_REBUFFER_START_PERCENT,
       app_config::SNAP_OUTPUT_REBUFFER_RESUME_PERCENT);
-  codec_.setFormatTarget(pcmProbe_);
 }
 SnapclientMode::~SnapclientMode() = default;
 
@@ -191,12 +190,12 @@ bool SnapclientMode::startSnapclientServices() {
   Serial.print(":");
   Serial.println(app_config::SNAP_SERVER_PORT);
   Serial.printf(
-      "[audio] configured fallback=%lu Hz, %u-bit, %u ch, codec=pcm (Snapcast WAV wrapper)\n",
+      "[audio] configured fallback=%lu Hz, %u-bit, %u ch, codec=opus\n",
       static_cast<unsigned long>(app_config::AUDIO_SAMPLE_RATE),
       app_config::AUDIO_BITS_PER_SAMPLE,
       app_config::AUDIO_CHANNELS);
   Serial.println(
-      "[audio] path=Snapserver PCM -> SnapcastPcmDecoder -> shared I2S DAC");
+      "[audio] path=Snapserver Opus -> OpusAudioDecoder -> shared I2S DAC");
   Serial.printf("[i2s] initial format=%lu Hz, %u-bit, %u ch\n",
                 static_cast<unsigned long>(app_config::AUDIO_SAMPLE_RATE),
                 app_config::AUDIO_BITS_PER_SAMPLE,
@@ -213,7 +212,7 @@ bool SnapclientMode::startSnapclientServices() {
                 RTOS_MAX_QUEUE_ENTRY_COUNT);
   Serial.printf("[snapclient] output task priority=%d\n",
                 RTOS_TASK_PRIORITY);
-  Serial.println("[snapclient] decoder=SnapcastPcmDecoder");
+  Serial.println("[snapclient] decoder=OpusAudioDecoder");
   Serial.printf("[snapclient] output gain=%.2f\n",
                 app_config::SNAPCLIENT_OUTPUT_GAIN);
   Serial.printf("[snapclient] final pcm gain=%.2f\n",
