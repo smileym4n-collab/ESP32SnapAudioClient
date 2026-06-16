@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 1.3.1
+  Version: 1.3.2
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "1.3.1"
+#define APP_FIRMWARE_VERSION "1.3.2"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v1.3.1"
+#define APP_FIRMWARE_VERSION_TAG "v1.3.2"
 #endif
 
 #if __has_include("secrets.h")

@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-06-16
+
+- Added a one-off board variant that moves the runtime mode-toggle button from `GPIO23` to `GPIO34`.
+- Changed the one-off button setup to use plain `INPUT` because classic ESP32 `GPIO34` does not provide an internal pull-up or pull-down; this board requires external biasing.
+- Disabled battery sensing for this one-off build because `GPIO34` is no longer available for the battery divider.
+- Updated visible firmware version fields and release documentation for `1.3.2`.
+
 ## [1.3.1] - 2026-06-13
 
 - Quiesce the Snapclient audio pipeline when an OTA firmware upload starts: the music fades out quickly, then the decode and network tasks are stopped and I2S is flushed, so the flash write and HTTP upload get an idle device instead of competing with Opus decode and the Snapcast stream for CPU and Wi-Fi. This makes OTA updates far more reliable while music is playing. If an OTA fails after audio was stopped, the device reboots to recover playback (the update does not commit, so it stays on the current firmware).

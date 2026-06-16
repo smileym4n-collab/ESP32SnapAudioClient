@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v1.3.1
+# Release Notes - ESP32 Audio Client v1.3.2
 
-Release date: 2026-06-13
+Release date: 2026-06-16
 
 Target hardware:
 
@@ -8,27 +8,24 @@ Target hardware:
 - 16 MB flash / 8 MB PSRAM
 - External I2S DAC
 - Opus Snapserver stream
+- One-off board variant with mode button on `GPIO34`
 
-## [1.3.1]
+## [1.3.2]
 
-- Quiesce the Snapclient audio pipeline when an OTA upload starts: the music fades out quickly, then the decode and network tasks stop and I2S flushes, so the flash write and upload run on an idle device. Far more reliable OTA while music is playing.
-- A failed OTA after audio was stopped now reboots to recover playback (the update never commits, so it stays on the current firmware).
-- Removed the unused optional I2S MCLK support and its `board_config.h` settings (PCM5102-style DACs derive their clocks from BCLK).
-- Cleaned up the repository documentation for sharing and aligned visible firmware version fields.
+- Moved the runtime mode-toggle button from `GPIO23` to `GPIO34` for a one-off board variant.
+- Configured the mode button pin as plain `INPUT`; classic ESP32 `GPIO34` has no internal pull-up/down, so the board must provide external biasing.
+- Disabled battery sensing because `GPIO34` is used by the mode button on this variant.
+- Updated visible firmware version fields for `1.3.2`.
 
-## Summary
+## Important Hardware Note
 
-A small follow-up to 1.3.0. The main functional change makes OTA updates reliable
-while audio is playing: previously the OTA HTTP receive competed with Opus decode
-for CPU (and the upload shared Wi-Fi with the Snapcast stream), which could stall
-or fail the update. Now an incoming update fades the music out and stops the audio
-pipeline first, handing the flash write a quiet, idle device. The rest of the
-release removes the never-used optional MCLK output and tidies the docs.
+`GPIO34` is input-only and does not support the ESP32's internal pull-up or pull-down resistors. This firmware expects an active-low button on `GPIO34` with an external pull-up. Without an external pull-up, the input can float and mode switching will be unreliable.
+
+Battery reporting is disabled in this build because the normal battery sense input also used `GPIO34`.
 
 ## Snapserver Profile
 
-Use a 44.1 kHz stereo PCM FIFO input from librespot, encoded as Opus for
-transport. Keep a generous `buffer` - it is the master jitter cushion:
+Use a 44.1 kHz stereo PCM FIFO input from librespot, encoded as Opus for transport:
 
 ```ini
 [stream]
@@ -44,14 +41,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `1.3.0`
-- New version: `1.3.1`
+- Previous version: `1.3.1`
+- New version: `1.3.2`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.3.1`
-- `firmwareVersion`: `1.3.1`
+- `version`: `1.3.2`
+- `firmwareVersion`: `1.3.2`
 
 ## Build Notes
 
@@ -64,15 +61,15 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2016016` bytes (well within the OTA slot limit)
+- Built firmware image: `2,013,424` bytes
 
 ## Manual Test Checklist
 
-- Flash `1.3.1` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.3.1` and `GET /api/status` reports `firmwareVersion` as `1.3.1`.
-- Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus` and a healthy `buffer` (e.g. `2000`).
-- **OTA while playing:** start an OTA from the companion app with music playing and confirm the audio fades out cleanly, the update completes, and playback resumes on the new firmware after reboot.
-- **OTA failure recovery:** if an upload is interrupted after audio stops, confirm the device reboots and resumes playback on the existing firmware.
-- **Channel routing:** with audio playing, POST `stereo` / `left` / `right` and confirm the output audibly switches with no reboot and survives a reboot.
-- Confirm Bluetooth mode still plays normally and is unchanged (stereo, no routing).
-- Confirm playback through the I2S DAC works with no MCLK line connected.
+- Flash `1.3.2` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 1.3.2` and `GET /api/status` reports `firmwareVersion` as `1.3.2`.
+- Confirm the boot log reports the mode button on `GPIO34`.
+- Confirm the boot log reports battery sensing as disabled.
+- Confirm the externally biased `GPIO34` button toggles between Snapclient and Bluetooth modes.
+- Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus`.
+- Confirm Snapclient audio playback still works.
+- Confirm Bluetooth mode still plays normally.

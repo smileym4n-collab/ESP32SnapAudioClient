@@ -1,14 +1,13 @@
 /*
   Project: ESP32 audio client (SnapApp channel control API)
-  Version: 1.3.1
+  Version: 1.3.2
   Framework: Arduino (PlatformIO)
 
   Pin map (ESP32-WROVER-IE-N16R8 -> external I2S DAC):
     GPIO26 -> I2S BCLK
     GPIO25 -> I2S LRCLK / WS
     GPIO13 -> I2S DOUT
-    GPIO34 -> SENSE / battery voltage divider input
-    GPIO23 -> Runtime mode-toggle button (active low with internal pull-up)
+    GPIO34 -> Runtime mode-toggle button (active low, external pull-up required)
     GPIO32 -> Wi-Fi/Snapclient status LED (active low, common-anode RGB)
     GPIO33 -> Bluetooth status LED (active low, common-anode RGB)
     GPIO14 -> Low battery warning LED (active low, common-anode RGB)

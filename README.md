@@ -9,7 +9,7 @@ receiver:
 It boots into Snapcast mode and you flip to Bluetooth (and back) with a single
 button press. Both modes share the same I2S DAC output path.
 
-Version: **1.3.1**
+Version: **1.3.2**
 
 ## Features
 
@@ -43,8 +43,8 @@ All hardware assignments live in [board_config.h](include/board_config.h).
 | I2S BCLK | `GPIO26` | External DAC bit clock |
 | I2S LRCLK / WS | `GPIO25` | External DAC word select |
 | I2S DOUT | `GPIO13` | External DAC serial data input |
-| Battery SENSE | `GPIO34` | 4S battery divider ADC input (ADC1) |
-| Mode button | `GPIO23` | Momentary, active-low, internal pull-up |
+| Battery SENSE | disabled | GPIO34 is used for the one-off mode button variant |
+| Mode button | `GPIO34` | Momentary, active-low, external pull-up required |
 | Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status, active-low common-anode |
 | Bluetooth LED | `GPIO33` | Bluetooth status, active-low common-anode |
 | Low-battery LED | `GPIO14` | Red low-battery warning, active-low common-anode |

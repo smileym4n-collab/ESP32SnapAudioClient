@@ -18,7 +18,7 @@ app_config::OperatingMode oppositeMode(app_config::OperatingMode mode) {
 void ModeSwitchController::begin(app_config::OperatingMode currentMode) {
   currentMode_ = currentMode;
   pinMode(board_config::BOOT_MODE_BUTTON_PIN,
-          board_config::BOOT_MODE_BUTTON_USE_PULLUP ? INPUT_PULLUP : INPUT_PULLDOWN);
+          board_config::BOOT_MODE_BUTTON_INPUT_MODE);
   printSerialHelp();
 }
 
