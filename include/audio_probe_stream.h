@@ -5,6 +5,8 @@
 #include <vector>
 
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 #include "AudioTools.h"
 #include "audio_output_controller.h"
@@ -20,7 +22,9 @@ class AudioProbeStream : public audio_tools::AudioStream {
   void setPcmGain(float gain) { pcmGain_ = gain; }
   void setPeriodicStatsEnabled(bool enabled) { periodicStatsEnabled_ = enabled; }
   void setDspConfig(const app_config::SnapclientDspConfig &config) {
+    lockDsp();
     dsp_.configure(config);
+    unlockDsp();
   }
   void setVolumeProvider(VolumeProvider provider, void *context) {
     volumeProvider_ = provider;
@@ -44,6 +48,9 @@ class AudioProbeStream : public audio_tools::AudioStream {
   }
 
   bool begin() override {
+    if (dspMutex_ == nullptr) {
+      dspMutex_ = xSemaphoreCreateMutex();
+    }
     // The shared I2S output is started by AudioOutputController before
     // Snapclient begins. Re-opening it here can force a second DMA allocation
     // during codec-header handling and crash the ESP32 driver.
@@ -58,9 +65,11 @@ class AudioProbeStream : public audio_tools::AudioStream {
 
   void setAudioInfo(audio_tools::AudioInfo newInfo) override {
     info = newInfo;
+    lockDsp();
     dsp_.setAudioInfo(newInfo.sample_rate,
                       newInfo.bits_per_sample,
                       newInfo.channels);
+    unlockDsp();
     firstWriteLogsRemaining_ = 3;
     Serial.printf("[snapclient-pcm] format=%ld Hz, %d-bit, %d ch\n",
                   static_cast<long>(newInfo.sample_rate),
@@ -110,7 +119,10 @@ class AudioProbeStream : public audio_tools::AudioStream {
     const app_config::ChannelMode channelMode =
         controller_ != nullptr ? controller_->channelMode()
                                : app_config::ChannelMode::Stereo;
+    lockDsp();
     dsp_.setVolume(currentSnapVolume());
+    const bool dspSamples = dsp_.canProcess() && len >= sizeof(int16_t) * 2;
+    unlockDsp();
     const bool routeChannels =
         channelMode != app_config::ChannelMode::Stereo &&
         info.bits_per_sample == 16 && info.channels == 2 &&
@@ -118,7 +130,6 @@ class AudioProbeStream : public audio_tools::AudioStream {
     const float gain = effectiveGain();
     const bool scaleSamples =
         gain < 0.999f && info.bits_per_sample == 16 && len >= sizeof(int16_t);
-    const bool dspSamples = dsp_.canProcess() && len >= sizeof(int16_t) * 2;
 
     const uint8_t *writeData = data;
     size_t writeLen = len;
@@ -130,7 +141,9 @@ class AudioProbeStream : public audio_tools::AudioStream {
         memcpy(processBuffer_.data(), data, len);
       }
       if (dspSamples) {
+        lockDsp();
         dsp_.processStereo16(processBuffer_.data(), processBuffer_.size());
+        unlockDsp();
       }
       if (scaleSamples) {
         applyScalar(processBuffer_.data(), processBuffer_.size(), gain);
@@ -155,6 +168,7 @@ class AudioProbeStream : public audio_tools::AudioStream {
   void *volumeProviderContext_ = nullptr;
   std::vector<uint8_t> processBuffer_;
   app_config::SnapclientDsp dsp_;
+  SemaphoreHandle_t dspMutex_ = nullptr;
   uint32_t windowStartMs_ = millis();
   uint32_t windowBytes_ = 0;
   uint16_t windowPeak_ = 0;
@@ -168,6 +182,18 @@ class AudioProbeStream : public audio_tools::AudioStream {
   float currentSnapVolume() const {
     return volumeProvider_ != nullptr ? volumeProvider_(volumeProviderContext_)
                                       : 1.0f;
+  }
+
+  void lockDsp() {
+    if (dspMutex_ != nullptr) {
+      xSemaphoreTake(dspMutex_, portMAX_DELAY);
+    }
+  }
+
+  void unlockDsp() {
+    if (dspMutex_ != nullptr) {
+      xSemaphoreGive(dspMutex_);
+    }
   }
 
   static uint16_t maxAbsPcm16(const uint8_t *buffer, size_t size) {

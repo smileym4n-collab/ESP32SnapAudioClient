@@ -39,9 +39,13 @@ class SnapclientMode : public RuntimeMode {
   void beginControlApi();
   void handleControlApi();
   void sendControlStatus();
+  void sendDspStatus();
   void handleSetChannelMode();
   void handleSetBluetoothName();
   void handleSetPowerSource();
+  void handleGetDsp();
+  void handleSetDsp();
+  void handleResetDsp();
   void handleFirmwareUploadRaw();
   void handleFirmwareUploadComplete();
   void quiesceAudioForOta();
@@ -55,6 +59,9 @@ class SnapclientMode : public RuntimeMode {
   static void snapClientTaskEntry(void *context);
   static float snapOutputVolume(void *context);
   void snapClientTaskLoop();
+  void applyDspConfig(const app_config::SnapclientDspConfig &config,
+                      bool persist);
+  String dspConfigJson() const;
 
   WiFiClient wifiClient_;
   AudioOutputController audioOutput_;
@@ -77,6 +84,7 @@ class SnapclientMode : public RuntimeMode {
   int otaResponseStatus_ = 500;
   String otaError_;
   String otaMessage_;
+  app_config::SnapclientDspConfig currentDspConfig_;
   app_config::PowerSource powerSource_ = app_config::PowerSource::Battery;
   bool snapclientStarted_ = false;
   bool wifiStartupFailed_ = false;

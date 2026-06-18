@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.0.0
+  Version: 2.1.0
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -12,11 +12,11 @@
 #include "snapclient_dsp.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.0.0"
+#define APP_FIRMWARE_VERSION "2.1.0"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.0.0"
+#define APP_FIRMWARE_VERSION_TAG "v2.1.0"
 #endif
 
 #if __has_include("secrets.h")
@@ -163,13 +163,8 @@ static constexpr float SNAPCLIENT_FINAL_PCM_GAIN = 1.00f;
 // Balance is -1.0..1.0 (negative = quieter right, positive = quieter left).
 static const SnapclientDspConfig SNAPCLIENT_DSP_CONFIG = {
     true,     // enabled
-    120.0f,   // low shelf frequency, Hz
-    0.0f,     // low shelf gain, dB
-    1000.0f,  // mid peaking frequency, Hz
-    0.8f,     // mid peaking Q
-    0.0f,     // mid peaking gain, dB
-    8000.0f,  // high shelf frequency, Hz
-    0.0f,     // high shelf gain, dB
+    0,        // EQ preset index (Flat)
+    0.0f,     // layered bass boost, dB
     0.0f,     // left gain, dB
     0.0f,     // right gain, dB
     0.0f,     // balance

@@ -7,15 +7,156 @@
 
 namespace app_config {
 
+static constexpr uint8_t SNAPCLIENT_EQ_BAND_COUNT = 5;
+static constexpr uint8_t SNAPCLIENT_EQ_PRESET_COUNT = 14;
+
+enum class SnapclientEqFilterType : uint8_t {
+  LowShelf,
+  Peaking,
+  HighShelf,
+};
+
+struct SnapclientEqBand {
+  SnapclientEqFilterType type;
+  float frequencyHz;
+  float gainDb;
+  float q;
+  bool enabled;
+};
+
+struct SnapclientEqPreset {
+  const char *name;
+  const char *displayName;
+  float preampDb;
+  SnapclientEqBand bands[SNAPCLIENT_EQ_BAND_COUNT];
+};
+
+static const SnapclientEqPreset SNAPCLIENT_EQ_PRESETS[SNAPCLIENT_EQ_PRESET_COUNT] = {
+    {"Flat",
+     "Flat",
+     0.0f,
+     {{SnapclientEqFilterType::LowShelf, 80.0f, 0.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 3500.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 0.0f, 0.707f, true}}},
+    {"Pop",
+     "Pop",
+     -4.0f,
+     {{SnapclientEqFilterType::LowShelf, 90.0f, 2.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, -1.0f, 0.9f, true},
+      {SnapclientEqFilterType::Peaking, 1500.0f, 1.0f, 0.9f, true},
+      {SnapclientEqFilterType::Peaking, 4000.0f, 2.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 2.0f, 0.707f, true}}},
+    {"Rock",
+     "Rock",
+     -5.0f,
+     {{SnapclientEqFilterType::LowShelf, 80.0f, 3.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, -2.0f, 0.9f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, -1.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 3500.0f, 2.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 3.0f, 0.707f, true}}},
+    {"Deep_Bass",
+     "Deep Bass",
+     -6.0f,
+     {{SnapclientEqFilterType::LowShelf, 55.0f, 5.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 120.0f, 2.0f, 0.85f, true},
+      {SnapclientEqFilterType::Peaking, 300.0f, -2.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 2500.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 1.0f, 0.707f, true}}},
+    {"Electronic",
+     "Electronic",
+     -6.0f,
+     {{SnapclientEqFilterType::LowShelf, 60.0f, 4.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 200.0f, -2.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, -1.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 4000.0f, 2.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 12000.0f, 3.0f, 0.707f, true}}},
+    {"Dance",
+     "Dance",
+     -6.0f,
+     {{SnapclientEqFilterType::LowShelf, 65.0f, 4.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 180.0f, -1.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 900.0f, -2.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 3000.0f, 1.5f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 11000.0f, 3.0f, 0.707f, true}}},
+    {"Vocal",
+     "Vocal",
+     -4.0f,
+     {{SnapclientEqFilterType::LowShelf, 100.0f, -2.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, -1.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 1200.0f, 2.0f, 0.9f, true},
+      {SnapclientEqFilterType::Peaking, 3000.0f, 3.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 1.0f, 0.707f, true}}},
+    {"Podcast",
+     "Podcast / Speech",
+     -4.0f,
+     {{SnapclientEqFilterType::LowShelf, 120.0f, -4.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, -2.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 1200.0f, 2.0f, 0.9f, true},
+      {SnapclientEqFilterType::Peaking, 3000.0f, 3.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 9000.0f, -1.0f, 0.707f, true}}},
+    {"Jazz",
+     "Jazz",
+     -3.0f,
+     {{SnapclientEqFilterType::LowShelf, 80.0f, 1.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, 1.0f, 0.85f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 3500.0f, 1.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 2.0f, 0.707f, true}}},
+    {"Classical",
+     "Classical",
+     -3.0f,
+     {{SnapclientEqFilterType::LowShelf, 70.0f, 1.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, 0.0f, 0.85f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 4000.0f, 1.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 12000.0f, 2.0f, 0.707f, true}}},
+    {"Loudness",
+     "Loudness",
+     -6.0f,
+     {{SnapclientEqFilterType::LowShelf, 75.0f, 4.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, 0.0f, 0.9f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, -2.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 4000.0f, 1.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 3.0f, 0.707f, true}}},
+    {"Treble_Boost",
+     "Treble Boost",
+     -5.0f,
+     {{SnapclientEqFilterType::LowShelf, 80.0f, 0.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, -1.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 4000.0f, 2.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 12000.0f, 4.0f, 0.707f, true}}},
+    {"Small_Speaker_Safe",
+     "Small Speaker Safe",
+     -3.0f,
+     {{SnapclientEqFilterType::LowShelf, 90.0f, -3.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 180.0f, 1.0f, 0.85f, true},
+      {SnapclientEqFilterType::Peaking, 800.0f, 0.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 3500.0f, 1.0f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, 2.0f, 0.707f, true}}},
+    {"Late_Night",
+     "Late Night",
+     -4.0f,
+     {{SnapclientEqFilterType::LowShelf, 80.0f, -2.0f, 0.707f, true},
+      {SnapclientEqFilterType::Peaking, 250.0f, -1.0f, 0.9f, true},
+      {SnapclientEqFilterType::Peaking, 1000.0f, 1.0f, 1.0f, true},
+      {SnapclientEqFilterType::Peaking, 3000.0f, 1.5f, 0.9f, true},
+      {SnapclientEqFilterType::HighShelf, 10000.0f, -1.0f, 0.707f, true}}},
+};
+
+inline const SnapclientEqPreset &snapclientEqPreset(uint8_t presetIndex) {
+  if (presetIndex >= SNAPCLIENT_EQ_PRESET_COUNT) {
+    return SNAPCLIENT_EQ_PRESETS[0];
+  }
+  return SNAPCLIENT_EQ_PRESETS[presetIndex];
+}
+
 struct SnapclientDspConfig {
   bool enabled;
-  float lowShelfHz;
-  float lowShelfDb;
-  float midHz;
-  float midQ;
-  float midDb;
-  float highShelfHz;
-  float highShelfDb;
+  uint8_t eqPresetIndex;
+  float bassBoostDb;
   float leftGainDb;
   float rightGainDb;
   float balance;
@@ -27,6 +168,35 @@ struct SnapclientDspConfig {
   bool softLimiterEnabled;
   float softLimiterCeiling;
 };
+
+inline float clampDspValue(float value, float minimum, float maximum) {
+  if (value < minimum) {
+    return minimum;
+  }
+  if (value > maximum) {
+    return maximum;
+  }
+  return value;
+}
+
+inline void sanitizeSnapclientDspConfig(SnapclientDspConfig &config,
+                                        const SnapclientDspConfig &defaults) {
+  config.loudnessFullBoostVolume = defaults.loudnessFullBoostVolume;
+  config.loudnessFlatVolume = defaults.loudnessFlatVolume;
+
+  if (config.eqPresetIndex >= SNAPCLIENT_EQ_PRESET_COUNT) {
+    config.eqPresetIndex = defaults.eqPresetIndex;
+  }
+  config.bassBoostDb = clampDspValue(config.bassBoostDb, 0.0f, 6.0f);
+  config.leftGainDb = clampDspValue(config.leftGainDb, -12.0f, 12.0f);
+  config.rightGainDb = clampDspValue(config.rightGainDb, -12.0f, 12.0f);
+  config.balance = clampDspValue(config.balance, -1.0f, 1.0f);
+  config.loudnessBassMaxDb =
+      clampDspValue(config.loudnessBassMaxDb, 0.0f, 9.0f);
+  config.headroomDb = clampDspValue(config.headroomDb, -12.0f, 0.0f);
+  config.softLimiterCeiling =
+      clampDspValue(config.softLimiterCeiling, 0.50f, 1.0f);
+}
 
 class SnapclientDsp {
  public:
@@ -75,7 +245,7 @@ class SnapclientDsp {
       float left = static_cast<float>(samples[frame * 2]) * leftGain;
       float right = static_cast<float>(samples[(frame * 2) + 1]) * rightGain;
 
-      for (uint8_t band = 0; band < kBandCount; ++band) {
+      for (uint8_t band = 0; band < SNAPCLIENT_EQ_BAND_COUNT; ++band) {
         left = filters_[0][band].process(left);
         right = filters_[1][band].process(right);
       }
@@ -93,8 +263,6 @@ class SnapclientDsp {
   float loudnessBassDb() const { return loudnessBassDb_; }
 
  private:
-  enum Band : uint8_t { kLowShelf = 0, kMidPeak = 1, kHighShelf = 2 };
-  static constexpr uint8_t kBandCount = 3;
   static constexpr float kPi = 3.14159265358979323846f;
 
   struct Biquad {
@@ -153,10 +321,9 @@ class SnapclientDsp {
   };
 
   SnapclientDspConfig config_ = {
-      false, 120.0f, 0.0f, 1000.0f, 0.8f, 0.0f, 8000.0f, 0.0f,
-      0.0f,  0.0f, 0.0f, true,    3.0f, 0.30f, 0.80f, 0.0f,
-      true,  0.98f};
-  Biquad filters_[2][kBandCount];
+      false, 0, 0.0f, 0.0f, 0.0f, 0.0f, true, 3.0f, 0.30f, 0.80f,
+      0.0f,  true, 0.98f};
+  Biquad filters_[2][SNAPCLIENT_EQ_BAND_COUNT];
   uint32_t sampleRate_ = 0;
   uint8_t bitsPerSample_ = 0;
   uint8_t channels_ = 0;
@@ -198,35 +365,56 @@ class SnapclientDsp {
   float leftGainLinear() const {
     const float balance = clamp(config_.balance, -1.0f, 1.0f);
     const float balanceGain = balance > 0.0f ? 1.0f - balance : 1.0f;
-    return dbToLinear(config_.headroomDb + config_.leftGainDb) * balanceGain;
+    const SnapclientEqPreset &preset = snapclientEqPreset(config_.eqPresetIndex);
+    return dbToLinear(config_.headroomDb + preset.preampDb + config_.leftGainDb) *
+           balanceGain;
   }
 
   float rightGainLinear() const {
     const float balance = clamp(config_.balance, -1.0f, 1.0f);
     const float balanceGain = balance < 0.0f ? 1.0f + balance : 1.0f;
-    return dbToLinear(config_.headroomDb + config_.rightGainDb) * balanceGain;
+    const SnapclientEqPreset &preset = snapclientEqPreset(config_.eqPresetIndex);
+    return dbToLinear(config_.headroomDb + preset.preampDb + config_.rightGainDb) *
+           balanceGain;
   }
 
   void resetState() {
     for (uint8_t channel = 0; channel < 2; ++channel) {
-      for (uint8_t band = 0; band < kBandCount; ++band) {
+      for (uint8_t band = 0; band < SNAPCLIENT_EQ_BAND_COUNT; ++band) {
         filters_[channel][band].reset();
       }
     }
   }
 
   void configureFilters() {
+    const SnapclientEqPreset &preset = snapclientEqPreset(config_.eqPresetIndex);
     for (uint8_t channel = 0; channel < 2; ++channel) {
-      configureLowShelf(filters_[channel][kLowShelf],
-                        config_.lowShelfHz,
-                        config_.lowShelfDb + loudnessBassDb_);
-      configurePeaking(filters_[channel][kMidPeak],
-                       config_.midHz,
-                       config_.midQ,
-                       config_.midDb);
-      configureHighShelf(filters_[channel][kHighShelf],
-                         config_.highShelfHz,
-                         config_.highShelfDb);
+      for (uint8_t bandIndex = 0; bandIndex < SNAPCLIENT_EQ_BAND_COUNT;
+           ++bandIndex) {
+        const SnapclientEqBand &band = preset.bands[bandIndex];
+        Biquad &filter = filters_[channel][bandIndex];
+        if (!band.enabled) {
+          filter.setBypass();
+          continue;
+        }
+
+        float gainDb = band.gainDb;
+        if (band.type == SnapclientEqFilterType::LowShelf) {
+          gainDb += config_.bassBoostDb + loudnessBassDb_;
+        }
+
+        switch (band.type) {
+          case SnapclientEqFilterType::LowShelf:
+            configureLowShelf(filter, band.frequencyHz, band.q, gainDb);
+            break;
+          case SnapclientEqFilterType::Peaking:
+            configurePeaking(filter, band.frequencyHz, band.q, gainDb);
+            break;
+          case SnapclientEqFilterType::HighShelf:
+            configureHighShelf(filter, band.frequencyHz, band.q, gainDb);
+            break;
+        }
+      }
     }
   }
 
@@ -236,8 +424,11 @@ class SnapclientDsp {
            fabsf(gainDb) >= 0.01f;
   }
 
-  void configureLowShelf(Biquad &filter, float frequencyHz, float gainDb) const {
-    if (!validFilter(frequencyHz, gainDb)) {
+  void configureLowShelf(Biquad &filter,
+                         float frequencyHz,
+                         float q,
+                         float gainDb) const {
+    if (!validFilter(frequencyHz, gainDb) || q <= 0.0f) {
       filter.setBypass();
       return;
     }
@@ -247,7 +438,7 @@ class SnapclientDsp {
     const float sine = sinf(omega);
     const float cosine = cosf(omega);
     const float sqrtA = sqrtf(a);
-    const float alpha = sine / 2.0f * sqrtf(2.0f);
+    const float alpha = sine / (2.0f * q);
 
     filter.setCoefficients(
         a * ((a + 1.0f) - ((a - 1.0f) * cosine) + (2.0f * sqrtA * alpha)),
@@ -281,8 +472,11 @@ class SnapclientDsp {
                            1.0f - (alpha / a));
   }
 
-  void configureHighShelf(Biquad &filter, float frequencyHz, float gainDb) const {
-    if (!validFilter(frequencyHz, gainDb)) {
+  void configureHighShelf(Biquad &filter,
+                          float frequencyHz,
+                          float q,
+                          float gainDb) const {
+    if (!validFilter(frequencyHz, gainDb) || q <= 0.0f) {
       filter.setBypass();
       return;
     }
@@ -292,7 +486,7 @@ class SnapclientDsp {
     const float sine = sinf(omega);
     const float cosine = cosf(omega);
     const float sqrtA = sqrtf(a);
-    const float alpha = sine / 2.0f * sqrtf(2.0f);
+    const float alpha = sine / (2.0f * q);
 
     filter.setCoefficients(
         a * ((a + 1.0f) + ((a - 1.0f) * cosine) + (2.0f * sqrtA * alpha)),

@@ -17,8 +17,8 @@ Example response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "2.0.0",
-  "firmwareVersion": "2.0.0",
+  "version": "2.1.0",
+  "firmwareVersion": "2.1.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
@@ -29,15 +29,24 @@ Example response:
   "channel_mode": "stereo",
   "dsp": {
     "enabled": true,
+    "eq_profile": "Flat",
+    "eq_profile_display": "Flat",
+    "eq_profiles": [
+      {"name": "Flat", "display_name": "Flat"},
+      {"name": "Pop", "display_name": "Pop"},
+      {"name": "Rock", "display_name": "Rock"}
+    ],
     "eq": {
-      "low_shelf_hz": 120.0,
-      "low_shelf_db": 0.0,
-      "mid_hz": 1000.0,
-      "mid_q": 0.80,
-      "mid_db": 0.0,
-      "high_shelf_hz": 8000.0,
-      "high_shelf_db": 0.0
+      "preamp_db": 0.0,
+      "bands": [
+        {"type": "low_shelf", "frequency_hz": 80.0, "gain_db": 0.0, "q": 0.707, "enabled": true},
+        {"type": "peaking", "frequency_hz": 250.0, "gain_db": 0.0, "q": 1.000, "enabled": true},
+        {"type": "peaking", "frequency_hz": 1000.0, "gain_db": 0.0, "q": 1.000, "enabled": true},
+        {"type": "peaking", "frequency_hz": 3500.0, "gain_db": 0.0, "q": 1.000, "enabled": true},
+        {"type": "high_shelf", "frequency_hz": 10000.0, "gain_db": 0.0, "q": 0.707, "enabled": true}
+      ]
     },
+    "bass_boost_db": 0.0,
     "left_gain_db": 0.0,
     "right_gain_db": 0.0,
     "balance": 0.00,
@@ -64,6 +73,7 @@ Example response:
     "bluetooth_name": true,
     "power_source": true,
     "snapclient_dsp": true,
+    "snapclient_dsp_update": true,
     "firmware_update": true
   }
 }
@@ -84,7 +94,7 @@ Fields:
 | `runtime_mode` | string | Current mode; `/api/status` is available in Snapclient mode |
 | `power_source` | string | Saved power source: `battery` or `mains` |
 | `channel_mode` | string | Current local output routing: `stereo`, `left`, or `right` |
-| `dsp` | object | Snapclient-only DSP configuration currently compiled into the firmware |
+| `dsp` | object | Current Snapclient-only DSP configuration |
 | `bluetooth_name` | string | Saved Bluetooth device name used on later Bluetooth-mode boots |
 | `battery.available` | boolean | `true` when battery sensing is enabled and a reading is available |
 | `battery.voltage` | number | Reconstructed 4S pack voltage in volts, not ADC divider voltage |
@@ -93,11 +103,13 @@ Fields:
 | `capabilities.bluetooth_name` | boolean | `true` when `POST /api/bluetooth-name` is available |
 | `capabilities.power_source` | boolean | `true` when `POST /api/power-source` is available |
 | `capabilities.snapclient_dsp` | boolean | `true` when the Snapclient PCM DSP status object is available |
+| `capabilities.snapclient_dsp_update` | boolean | `true` when `POST /api/dsp` can update DSP settings |
 | `capabilities.firmware_update` | boolean | `true` when `POST /api/firmware` is available |
 
-The `dsp` object is informational in this API version. Tune the EQ, channel
-gains, balance, loudness bass boost, headroom, and limiter values in
-`SNAPCLIENT_DSP_CONFIG` before building firmware.
+The `dsp` object reports the live DSP settings. Values are loaded from ESP32
+preferences when present, otherwise from `SNAPCLIENT_DSP_CONFIG`.
+Companion apps should usually expose `eq_profile`, `bass_boost_db`,
+`loudness.enabled`, and `balance` as the main user controls.
 
 When battery sensing is unavailable:
 
@@ -111,6 +123,66 @@ When battery sensing is unavailable:
 
 When `power_source` is `mains`, companion apps should hide battery UI. The
 status response reports `battery.available: false`.
+
+## GET /api/dsp
+
+Returns the current Snapclient DSP settings. The response body has the same shape
+as the `dsp` object in `GET /api/status`.
+
+## POST /api/dsp
+
+Partially updates Snapclient DSP settings, applies them live, and saves them in
+ESP32 preferences so they survive reboot and OTA updates. EQ frequency, gain,
+and Q values come from the selected firmware preset.
+
+Request:
+
+```http
+POST /api/dsp
+Content-Type: application/json
+```
+
+```json
+{
+  "enabled": true,
+  "eq_profile": "Rock",
+  "bass_boost_db": 2.0,
+  "balance": 0.0,
+  "loudness": {
+    "enabled": true,
+    "bass_max_db": 3.0
+  },
+  "headroom_db": -2.0,
+  "soft_limiter": {
+    "enabled": true,
+    "ceiling": 0.98
+  }
+}
+```
+
+Accepted writable fields:
+
+| Field | Range |
+| --- | --- |
+| `enabled` | boolean |
+| `eq_profile` / `profile` / `preset` | one of the names in `eq_profiles` |
+| `eq.profile` / `eq.preset` | one of the names in `eq_profiles` |
+| `bass_boost_db` | `0.0..6.0` dB |
+| `left_gain_db` / `right_gain_db` | `-12.0..12.0` dB |
+| `balance` | `-1.0..1.0` |
+| `loudness.enabled` | boolean |
+| `loudness.bass_max_db` | `0.0..9.0` dB |
+| `headroom_db` | `-12.0..0.0` dB |
+| `soft_limiter.enabled` | boolean |
+| `soft_limiter.ceiling` | `0.50..1.00` |
+
+Out-of-range numeric values are clamped. Successful responses return the updated
+DSP object.
+
+## POST /api/dsp/reset
+
+Clears saved DSP preferences, reapplies `SNAPCLIENT_DSP_CONFIG`, and returns the
+updated DSP object.
 
 ## POST /api/channel-mode
 

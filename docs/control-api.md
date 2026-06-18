@@ -23,8 +23,8 @@ Example response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "2.0.0",
-  "firmwareVersion": "2.0.0",
+  "version": "2.1.0",
+  "firmwareVersion": "2.1.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
@@ -35,15 +35,24 @@ Example response:
   "channel_mode": "stereo",
   "dsp": {
     "enabled": true,
+    "eq_profile": "Flat",
+    "eq_profile_display": "Flat",
+    "eq_profiles": [
+      {"name": "Flat", "display_name": "Flat"},
+      {"name": "Pop", "display_name": "Pop"},
+      {"name": "Rock", "display_name": "Rock"}
+    ],
     "eq": {
-      "low_shelf_hz": 120.0,
-      "low_shelf_db": 0.0,
-      "mid_hz": 1000.0,
-      "mid_q": 0.80,
-      "mid_db": 0.0,
-      "high_shelf_hz": 8000.0,
-      "high_shelf_db": 0.0
+      "preamp_db": 0.0,
+      "bands": [
+        {"type": "low_shelf", "frequency_hz": 80.0, "gain_db": 0.0, "q": 0.707, "enabled": true},
+        {"type": "peaking", "frequency_hz": 250.0, "gain_db": 0.0, "q": 1.000, "enabled": true},
+        {"type": "peaking", "frequency_hz": 1000.0, "gain_db": 0.0, "q": 1.000, "enabled": true},
+        {"type": "peaking", "frequency_hz": 3500.0, "gain_db": 0.0, "q": 1.000, "enabled": true},
+        {"type": "high_shelf", "frequency_hz": 10000.0, "gain_db": 0.0, "q": 0.707, "enabled": true}
+      ]
     },
+    "bass_boost_db": 0.0,
     "left_gain_db": 0.0,
     "right_gain_db": 0.0,
     "balance": 0.00,
@@ -70,6 +79,7 @@ Example response:
     "bluetooth_name": true,
     "power_source": true,
     "snapclient_dsp": true,
+    "snapclient_dsp_update": true,
     "firmware_update": true
   }
 }
@@ -91,13 +101,18 @@ OTA fields:
 
 DSP fields:
 
-- `dsp`: Snapclient-only EQ/DSP configuration compiled into the firmware
+- `dsp`: current Snapclient-only EQ/DSP configuration
 - `capabilities.snapclient_dsp`: `true` when the status response includes the DSP object
+- `capabilities.snapclient_dsp_update`: `true` when `POST /api/dsp` can update DSP settings
+- `dsp.eq_profile`: selected friendly EQ preset name
+- `dsp.eq_profiles`: available preset names for a companion-app selector
+- `dsp.bass_boost_db`: fixed bass lift layered on top of the selected profile
 - `dsp.loudness`: volume-aware low-shelf bass boost; the boost is strongest at or below `full_boost_volume` and fades out by `flat_volume`
 - `dsp.soft_limiter`: final limiter settings used after EQ, channel gain, and balance
 
-This API version reports DSP settings but does not provide a runtime DSP update
-endpoint. Tune `SNAPCLIENT_DSP_CONFIG` before building firmware.
+DSP settings are loaded from ESP32 preferences when present, otherwise from
+`SNAPCLIENT_DSP_CONFIG`. Updates are applied live and saved. Companion apps
+should usually present profile, bass boost, loudness, and balance controls.
 
 If battery sensing is disabled or the configured pin is not ADC1-capable, the response includes:
 
@@ -161,6 +176,69 @@ The selected power source is saved in ESP32 preferences and restored on later
 Snapclient boots, including after OTA updates.
 
 Successful responses return the same shape as `GET /api/status`.
+
+## Get DSP Settings
+
+```text
+GET /api/dsp
+```
+
+Returns the current DSP settings with the same shape as `dsp` in
+`GET /api/status`.
+
+## Set DSP Settings
+
+```text
+POST /api/dsp
+Content-Type: application/json
+```
+
+Request body may be partial:
+
+```json
+{
+  "enabled": true,
+  "eq_profile": "Rock",
+  "bass_boost_db": 2.0,
+  "balance": 0.0,
+  "loudness": {
+    "enabled": true,
+    "bass_max_db": 3.0
+  },
+  "headroom_db": -2.0,
+  "soft_limiter": {
+    "enabled": true,
+    "ceiling": 0.98
+  }
+}
+```
+
+Writable fields and ranges:
+
+- `enabled`: boolean
+- `eq_profile`, `profile`, or `preset`: one of the names in `eq_profiles`
+- `eq.profile` or `eq.preset`: one of the names in `eq_profiles`
+- `bass_boost_db`: `0.0..6.0` dB
+- `left_gain_db`, `right_gain_db`: `-12.0..12.0` dB
+- `balance`: `-1.0..1.0`
+- `loudness.enabled`: boolean
+- `loudness.bass_max_db`: `0.0..9.0` dB
+- `headroom_db`: `-12.0..0.0` dB
+- `soft_limiter.enabled`: boolean
+- `soft_limiter.ceiling`: `0.50..1.00`
+
+Out-of-range numeric values are clamped. EQ frequency, gain, and Q values are
+provided by the selected firmware preset. Successful responses return the updated
+DSP object.
+
+## Reset DSP Settings
+
+```text
+POST /api/dsp/reset
+```
+
+Clears the saved DSP preferences, reapplies `SNAPCLIENT_DSP_CONFIG`, and returns
+the updated DSP object.
 
 ## Upload Firmware
 
