@@ -27,6 +27,32 @@ Example response:
   "runtime_mode": "snapclient",
   "power_source": "battery",
   "channel_mode": "stereo",
+  "dsp": {
+    "enabled": true,
+    "eq": {
+      "low_shelf_hz": 120.0,
+      "low_shelf_db": 0.0,
+      "mid_hz": 1000.0,
+      "mid_q": 0.80,
+      "mid_db": 0.0,
+      "high_shelf_hz": 8000.0,
+      "high_shelf_db": 0.0
+    },
+    "left_gain_db": 0.0,
+    "right_gain_db": 0.0,
+    "balance": 0.00,
+    "loudness": {
+      "enabled": true,
+      "bass_max_db": 3.0,
+      "full_boost_volume": 0.30,
+      "flat_volume": 0.80
+    },
+    "headroom_db": 0.0,
+    "soft_limiter": {
+      "enabled": true,
+      "ceiling": 0.98
+    }
+  },
   "bluetooth_name": "CoolCube",
   "battery": {
     "available": true,
@@ -37,6 +63,7 @@ Example response:
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
     "power_source": true,
+    "snapclient_dsp": true,
     "firmware_update": true
   }
 }
@@ -57,6 +84,7 @@ Fields:
 | `runtime_mode` | string | Current mode; `/api/status` is available in Snapclient mode |
 | `power_source` | string | Saved power source: `battery` or `mains` |
 | `channel_mode` | string | Current local output routing: `stereo`, `left`, or `right` |
+| `dsp` | object | Snapclient-only DSP configuration currently compiled into the firmware |
 | `bluetooth_name` | string | Saved Bluetooth device name used on later Bluetooth-mode boots |
 | `battery.available` | boolean | `true` when battery sensing is enabled and a reading is available |
 | `battery.voltage` | number | Reconstructed 4S pack voltage in volts, not ADC divider voltage |
@@ -64,7 +92,12 @@ Fields:
 | `capabilities.channel_modes` | string array | Channel modes accepted by `POST /api/channel-mode` |
 | `capabilities.bluetooth_name` | boolean | `true` when `POST /api/bluetooth-name` is available |
 | `capabilities.power_source` | boolean | `true` when `POST /api/power-source` is available |
+| `capabilities.snapclient_dsp` | boolean | `true` when the Snapclient PCM DSP status object is available |
 | `capabilities.firmware_update` | boolean | `true` when `POST /api/firmware` is available |
+
+The `dsp` object is informational in this API version. Tune the EQ, channel
+gains, balance, loudness bass boost, headroom, and limiter values in
+`SNAPCLIENT_DSP_CONFIG` before building firmware.
 
 When battery sensing is unavailable:
 

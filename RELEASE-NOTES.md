@@ -9,6 +9,12 @@ Target hardware:
 - External I2S DAC
 - Opus Snapserver stream
 
+## [Unreleased]
+
+- Added a Snapclient-only EQ/DSP stage after Opus decode and channel routing: 3-band biquad EQ, per-channel gain/balance, volume-aware loudness bass boost, optional headroom trim, and a soft limiter.
+- Added `/api/status` reporting for the compiled DSP settings under `dsp`, plus `capabilities.snapclient_dsp`.
+- Bluetooth mode remains unchanged and does not use the Snapclient DSP path.
+
 ## [1.3.1]
 
 - Quiesce the Snapclient audio pipeline when an OTA upload starts: the music fades out quickly, then the decode and network tasks stop and I2S flushes, so the flash write and upload run on an idle device. Far more reliable OTA while music is playing.

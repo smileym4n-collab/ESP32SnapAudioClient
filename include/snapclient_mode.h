@@ -53,6 +53,7 @@ class SnapclientMode : public RuntimeMode {
   bool startSnapClientTask();
   void stopSnapClientTask(uint32_t timeoutMs);
   static void snapClientTaskEntry(void *context);
+  static float snapOutputVolume(void *context);
   void snapClientTaskLoop();
 
   WiFiClient wifiClient_;

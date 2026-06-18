@@ -9,6 +9,7 @@
 #include <Arduino.h>
 
 #include "power_source.h"
+#include "snapclient_dsp.h"
 
 #ifndef APP_FIRMWARE_VERSION
 #define APP_FIRMWARE_VERSION "1.3.1"
@@ -157,6 +158,29 @@ static constexpr float SNAPCLIENT_OUTPUT_GAIN = 0.85f;
 // Final safety trim applied to the actual Snapclient PCM samples immediately
 // before they are handed to I2S. This does not affect Bluetooth mode.
 static constexpr float SNAPCLIENT_FINAL_PCM_GAIN = 1.00f;
+// Snapclient-only DSP stage applied after Opus decode and channel routing, just
+// before the shared I2S output. Bluetooth mode is intentionally unchanged.
+// Balance is -1.0..1.0 (negative = quieter right, positive = quieter left).
+static const SnapclientDspConfig SNAPCLIENT_DSP_CONFIG = {
+    true,     // enabled
+    120.0f,   // low shelf frequency, Hz
+    0.0f,     // low shelf gain, dB
+    1000.0f,  // mid peaking frequency, Hz
+    0.8f,     // mid peaking Q
+    0.0f,     // mid peaking gain, dB
+    8000.0f,  // high shelf frequency, Hz
+    0.0f,     // high shelf gain, dB
+    0.0f,     // left gain, dB
+    0.0f,     // right gain, dB
+    0.0f,     // balance
+    true,     // loudness bass boost enabled
+    3.0f,     // loudness max bass boost, dB
+    0.30f,    // full loudness boost at or below this Snapserver volume
+    0.80f,    // loudness boost fades to flat at or above this volume
+    0.0f,     // output headroom trim, dB
+    true,     // soft limiter enabled
+    0.98f     // soft limiter ceiling, 0.0..1.0 of PCM full scale
+};
 // Re-enable the Snapclient resampler, but only allow very small drift
 // corrections so the queue can stay centered without audible pitch wobble.
 static constexpr bool SNAPCLIENT_USE_RESAMPLER = true;

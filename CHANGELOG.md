@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Added a Snapclient-only EQ/DSP stage after Opus decode and channel routing: 3-band biquad EQ (low shelf, mid peaking, high shelf), per-channel gain/balance, volume-aware loudness bass boost, optional output headroom, and a final soft limiter. Bluetooth mode remains unchanged.
+- Added compiled DSP settings to `/api/status` under `dsp` and advertised `capabilities.snapclient_dsp` so companion apps can display the active firmware tuning.
+- Documented `SNAPCLIENT_DSP_CONFIG` as the firmware tuning point for the first DSP implementation.
+
 ## [1.3.1] - 2026-06-13
 
 - Quiesce the Snapclient audio pipeline when an OTA firmware upload starts: the music fades out quickly, then the decode and network tasks are stopped and I2S is flushed, so the flash write and HTTP upload get an idle device instead of competing with Opus decode and the Snapcast stream for CPU and Wi-Fi. This makes OTA updates far more reliable while music is playing. If an OTA fails after audio was stopped, the device reboots to recover playback (the update does not commit, so it stays on the current firmware).

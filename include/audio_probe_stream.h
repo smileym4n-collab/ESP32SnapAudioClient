@@ -9,13 +9,23 @@
 #include "AudioTools.h"
 #include "audio_output_controller.h"
 #include "channel_mode.h"
+#include "snapclient_dsp.h"
 
 class AudioProbeStream : public audio_tools::AudioStream {
  public:
+  using VolumeProvider = float (*)(void *context);
+
   explicit AudioProbeStream(audio_tools::AudioStream &target) : target_(&target) {}
 
   void setPcmGain(float gain) { pcmGain_ = gain; }
   void setPeriodicStatsEnabled(bool enabled) { periodicStatsEnabled_ = enabled; }
+  void setDspConfig(const app_config::SnapclientDspConfig &config) {
+    dsp_.configure(config);
+  }
+  void setVolumeProvider(VolumeProvider provider, void *context) {
+    volumeProvider_ = provider;
+    volumeProviderContext_ = context;
+  }
 
   // Source of truth for the active Snapclient channel routing. The probe reads
   // the live mode on every write, so POST /api/channel-mode takes effect
@@ -48,6 +58,9 @@ class AudioProbeStream : public audio_tools::AudioStream {
 
   void setAudioInfo(audio_tools::AudioInfo newInfo) override {
     info = newInfo;
+    dsp_.setAudioInfo(newInfo.sample_rate,
+                      newInfo.bits_per_sample,
+                      newInfo.channels);
     firstWriteLogsRemaining_ = 3;
     Serial.printf("[snapclient-pcm] format=%ld Hz, %d-bit, %d ch\n",
                   static_cast<long>(newInfo.sample_rate),
@@ -97,6 +110,7 @@ class AudioProbeStream : public audio_tools::AudioStream {
     const app_config::ChannelMode channelMode =
         controller_ != nullptr ? controller_->channelMode()
                                : app_config::ChannelMode::Stereo;
+    dsp_.setVolume(currentSnapVolume());
     const bool routeChannels =
         channelMode != app_config::ChannelMode::Stereo &&
         info.bits_per_sample == 16 && info.channels == 2 &&
@@ -104,15 +118,19 @@ class AudioProbeStream : public audio_tools::AudioStream {
     const float gain = effectiveGain();
     const bool scaleSamples =
         gain < 0.999f && info.bits_per_sample == 16 && len >= sizeof(int16_t);
+    const bool dspSamples = dsp_.canProcess() && len >= sizeof(int16_t) * 2;
 
     const uint8_t *writeData = data;
     size_t writeLen = len;
-    if (routeChannels || scaleSamples) {
+    if (routeChannels || scaleSamples || dspSamples) {
       processBuffer_.resize(len);
       if (routeChannels) {
         app_config::routeStereo16(channelMode, data, len, processBuffer_.data());
       } else {
         memcpy(processBuffer_.data(), data, len);
+      }
+      if (dspSamples) {
+        dsp_.processStereo16(processBuffer_.data(), processBuffer_.size());
       }
       if (scaleSamples) {
         applyScalar(processBuffer_.data(), processBuffer_.size(), gain);
@@ -133,7 +151,10 @@ class AudioProbeStream : public audio_tools::AudioStream {
  private:
   audio_tools::AudioStream *target_ = nullptr;
   AudioOutputController *controller_ = nullptr;
+  VolumeProvider volumeProvider_ = nullptr;
+  void *volumeProviderContext_ = nullptr;
   std::vector<uint8_t> processBuffer_;
+  app_config::SnapclientDsp dsp_;
   uint32_t windowStartMs_ = millis();
   uint32_t windowBytes_ = 0;
   uint16_t windowPeak_ = 0;
@@ -143,6 +164,11 @@ class AudioProbeStream : public audio_tools::AudioStream {
   bool fadeActive_ = false;
   uint32_t fadeStartMs_ = 0;
   uint32_t fadeDurationMs_ = 1;
+
+  float currentSnapVolume() const {
+    return volumeProvider_ != nullptr ? volumeProvider_(volumeProviderContext_)
+                                      : 1.0f;
+  }
 
   static uint16_t maxAbsPcm16(const uint8_t *buffer, size_t size) {
     const size_t sampleCount = size / sizeof(int16_t);

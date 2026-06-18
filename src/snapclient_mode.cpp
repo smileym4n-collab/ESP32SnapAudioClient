@@ -114,6 +114,8 @@ SnapclientMode::SnapclientMode()
                        app_config::SNAPCLIENT_MAX_PLAYBACK_FACTOR,
                        app_config::SNAPCLIENT_UNITY_DEADBAND) {
   pcmProbe_.setPcmGain(app_config::SNAPCLIENT_FINAL_PCM_GAIN);
+  pcmProbe_.setDspConfig(app_config::SNAPCLIENT_DSP_CONFIG);
+  pcmProbe_.setVolumeProvider(snapOutputVolume, &snapOutput_);
   pcmProbe_.setChannelController(&audioOutput_);
   pcmProbe_.setPeriodicStatsEnabled(app_config::SNAPCLIENT_PERIODIC_STATS_ENABLED);
   snapProcessor_->setPeriodicStatsEnabled(
@@ -218,6 +220,27 @@ bool SnapclientMode::startSnapclientServices() {
                 app_config::SNAPCLIENT_OUTPUT_GAIN);
   Serial.printf("[snapclient] final pcm gain=%.2f\n",
                 app_config::SNAPCLIENT_FINAL_PCM_GAIN);
+  Serial.printf("[snapclient] dsp=%s low=%.1fHz/%.1fdB mid=%.1fHz/q%.2f/%.1fdB high=%.1fHz/%.1fdB\n",
+                app_config::SNAPCLIENT_DSP_CONFIG.enabled ? "on" : "off",
+                app_config::SNAPCLIENT_DSP_CONFIG.lowShelfHz,
+                app_config::SNAPCLIENT_DSP_CONFIG.lowShelfDb,
+                app_config::SNAPCLIENT_DSP_CONFIG.midHz,
+                app_config::SNAPCLIENT_DSP_CONFIG.midQ,
+                app_config::SNAPCLIENT_DSP_CONFIG.midDb,
+                app_config::SNAPCLIENT_DSP_CONFIG.highShelfHz,
+                app_config::SNAPCLIENT_DSP_CONFIG.highShelfDb);
+  Serial.printf("[snapclient] dsp gains left=%.1fdB right=%.1fdB balance=%.2f headroom=%.1fdB limiter=%s ceiling=%.2f\n",
+                app_config::SNAPCLIENT_DSP_CONFIG.leftGainDb,
+                app_config::SNAPCLIENT_DSP_CONFIG.rightGainDb,
+                app_config::SNAPCLIENT_DSP_CONFIG.balance,
+                app_config::SNAPCLIENT_DSP_CONFIG.headroomDb,
+                app_config::SNAPCLIENT_DSP_CONFIG.softLimiterEnabled ? "on" : "off",
+                app_config::SNAPCLIENT_DSP_CONFIG.softLimiterCeiling);
+  Serial.printf("[snapclient] loudness=%s bass=%.1fdB volume=%.2f..%.2f\n",
+                app_config::SNAPCLIENT_DSP_CONFIG.loudnessEnabled ? "on" : "off",
+                app_config::SNAPCLIENT_DSP_CONFIG.loudnessBassMaxDb,
+                app_config::SNAPCLIENT_DSP_CONFIG.loudnessFullBoostVolume,
+                app_config::SNAPCLIENT_DSP_CONFIG.loudnessFlatVolume);
   Serial.printf("[snapclient] sync=dynamic-clamped range=%.4f..%.4f deadband=%.4f lag=%dms interval=%d\n",
                 app_config::SNAPCLIENT_MIN_PLAYBACK_FACTOR,
                 app_config::SNAPCLIENT_MAX_PLAYBACK_FACTOR,
@@ -425,6 +448,11 @@ void SnapclientMode::snapClientTaskEntry(void *context) {
   vTaskDelete(nullptr);
 }
 
+float SnapclientMode::snapOutputVolume(void *context) {
+  auto *output = static_cast<ProjectSnapOutput *>(context);
+  return output != nullptr ? output->volume() : 1.0f;
+}
+
 void SnapclientMode::snapClientTaskLoop() {
   while (snapTaskRunning_) {
     if (WiFi.status() == WL_CONNECTED) {
@@ -596,7 +624,46 @@ void SnapclientMode::sendControlStatus() {
   response += "\"";
   response += ",\"channel_mode\":\"";
   response += app_config::channelModeName(audioOutput_.channelMode());
-  response += "\",\"bluetooth_name\":\"";
+  response += "\",\"dsp\":{";
+  response += "\"enabled\":";
+  response += app_config::SNAPCLIENT_DSP_CONFIG.enabled ? "true" : "false";
+  response += ",\"eq\":{\"low_shelf_hz\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.lowShelfHz, 1);
+  response += ",\"low_shelf_db\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.lowShelfDb, 1);
+  response += ",\"mid_hz\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.midHz, 1);
+  response += ",\"mid_q\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.midQ, 2);
+  response += ",\"mid_db\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.midDb, 1);
+  response += ",\"high_shelf_hz\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.highShelfHz, 1);
+  response += ",\"high_shelf_db\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.highShelfDb, 1);
+  response += "},\"left_gain_db\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.leftGainDb, 1);
+  response += ",\"right_gain_db\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.rightGainDb, 1);
+  response += ",\"balance\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.balance, 2);
+  response += ",\"loudness\":{\"enabled\":";
+  response += app_config::SNAPCLIENT_DSP_CONFIG.loudnessEnabled ? "true" : "false";
+  response += ",\"bass_max_db\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.loudnessBassMaxDb, 1);
+  response += ",\"full_boost_volume\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.loudnessFullBoostVolume, 2);
+  response += ",\"flat_volume\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.loudnessFlatVolume, 2);
+  response += "},\"headroom_db\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.headroomDb, 1);
+  response += ",\"soft_limiter\":{\"enabled\":";
+  response +=
+      app_config::SNAPCLIENT_DSP_CONFIG.softLimiterEnabled ? "true" : "false";
+  response += ",\"ceiling\":";
+  response += String(app_config::SNAPCLIENT_DSP_CONFIG.softLimiterCeiling, 2);
+  response += "}}";
+  response += ",\"bluetooth_name\":\"";
   response += loadBluetoothNamePreference();
   response += "\",\"battery\":{";
   response += "\"available\":";
@@ -608,7 +675,7 @@ void SnapclientMode::sendControlStatus() {
     response += battery.percent;
   }
   response += "}";
-  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"power_source\":true,\"firmware_update\":";
+  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"power_source\":true,\"snapclient_dsp\":true,\"firmware_update\":";
   response += otaSupported ? "true" : "false";
   response += "}";
   response += "}";

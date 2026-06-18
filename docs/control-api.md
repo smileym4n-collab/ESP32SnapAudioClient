@@ -33,6 +33,32 @@ Example response:
   "runtime_mode": "snapclient",
   "power_source": "battery",
   "channel_mode": "stereo",
+  "dsp": {
+    "enabled": true,
+    "eq": {
+      "low_shelf_hz": 120.0,
+      "low_shelf_db": 0.0,
+      "mid_hz": 1000.0,
+      "mid_q": 0.80,
+      "mid_db": 0.0,
+      "high_shelf_hz": 8000.0,
+      "high_shelf_db": 0.0
+    },
+    "left_gain_db": 0.0,
+    "right_gain_db": 0.0,
+    "balance": 0.00,
+    "loudness": {
+      "enabled": true,
+      "bass_max_db": 3.0,
+      "full_boost_volume": 0.30,
+      "flat_volume": 0.80
+    },
+    "headroom_db": 0.0,
+    "soft_limiter": {
+      "enabled": true,
+      "ceiling": 0.98
+    }
+  },
   "bluetooth_name": "CoolCube",
   "battery": {
     "available": true,
@@ -43,6 +69,7 @@ Example response:
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
     "power_source": true,
+    "snapclient_dsp": true,
     "firmware_update": true
   }
 }
@@ -61,6 +88,16 @@ OTA fields:
 - `update_in_progress`: `true` while a firmware upload is active
 - `ota_partition_size`: inactive OTA app partition size in bytes, or `0` if unavailable
 - `capabilities.firmware_update`: `true` when `POST /api/firmware` is available
+
+DSP fields:
+
+- `dsp`: Snapclient-only EQ/DSP configuration compiled into the firmware
+- `capabilities.snapclient_dsp`: `true` when the status response includes the DSP object
+- `dsp.loudness`: volume-aware low-shelf bass boost; the boost is strongest at or below `full_boost_volume` and fades out by `flat_volume`
+- `dsp.soft_limiter`: final limiter settings used after EQ, channel gain, and balance
+
+This API version reports DSP settings but does not provide a runtime DSP update
+endpoint. Tune `SNAPCLIENT_DSP_CONFIG` before building firmware.
 
 If battery sensing is disabled or the configured pin is not ADC1-capable, the response includes:
 
