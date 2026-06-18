@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v1.3.1
+# Release Notes - ESP32 Audio Client v2.0.0
 
-Release date: 2026-06-13
+Release date: 2026-06-18
 
 Target hardware:
 
@@ -9,27 +9,22 @@ Target hardware:
 - External I2S DAC
 - Opus Snapserver stream
 
-## [Unreleased]
+## [2.0.0]
 
 - Added a Snapclient-only EQ/DSP stage after Opus decode and channel routing: 3-band biquad EQ, per-channel gain/balance, volume-aware loudness bass boost, optional headroom trim, and a soft limiter.
 - Added `/api/status` reporting for the compiled DSP settings under `dsp`, plus `capabilities.snapclient_dsp`.
 - Bluetooth mode remains unchanged and does not use the Snapclient DSP path.
 
-## [1.3.1]
-
-- Quiesce the Snapclient audio pipeline when an OTA upload starts: the music fades out quickly, then the decode and network tasks stop and I2S flushes, so the flash write and upload run on an idle device. Far more reliable OTA while music is playing.
-- A failed OTA after audio was stopped now reboots to recover playback (the update never commits, so it stays on the current firmware).
-- Removed the unused optional I2S MCLK support and its `board_config.h` settings (PCM5102-style DACs derive their clocks from BCLK).
-- Cleaned up the repository documentation for sharing and aligned visible firmware version fields.
-
 ## Summary
 
-A small follow-up to 1.3.0. The main functional change makes OTA updates reliable
-while audio is playing: previously the OTA HTTP receive competed with Opus decode
-for CPU (and the upload shared Wi-Fi with the Snapcast stream), which could stall
-or fail the update. Now an incoming update fades the music out and stops the audio
-pipeline first, handing the flash write a quiet, idle device. The rest of the
-release removes the never-used optional MCLK output and tidies the docs.
+This release adds the first Snapclient DSP pipeline. Decoded PCM now passes
+through a compile-time EQ and gain stage before I2S output, with optional
+loudness bass boost, output headroom, and a soft limiter. The status API reports
+the compiled DSP settings so companion apps can show what tuning is active.
+
+This is a major-version release because `/api/status` now exposes a new `dsp`
+object and `capabilities.snapclient_dsp` capability, and the Snapclient audio
+path has a meaningful new processing stage. Bluetooth output remains unchanged.
 
 ## Snapserver Profile
 
@@ -50,14 +45,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `1.3.0`
-- New version: `1.3.1`
+- Previous version: `1.3.1`
+- New version: `2.0.0`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `1.3.1`
-- `firmwareVersion`: `1.3.1`
+- `version`: `2.0.0`
+- `firmwareVersion`: `2.0.0`
 
 ## Build Notes
 
@@ -70,15 +65,16 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2016016` bytes (well within the OTA slot limit)
+- Built firmware image: `2024672` bytes (well within the OTA slot limit)
 
 ## Manual Test Checklist
 
-- Flash `1.3.1` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 1.3.1` and `GET /api/status` reports `firmwareVersion` as `1.3.1`.
+- Flash `2.0.0` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 2.0.0` and `GET /api/status` reports `firmwareVersion` as `2.0.0`.
 - Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus` and a healthy `buffer` (e.g. `2000`).
+- **DSP status:** confirm `GET /api/status` includes `dsp.enabled`, `dsp.eq`, `dsp.loudness`, `dsp.soft_limiter`, and `capabilities.snapclient_dsp: true`.
+- **DSP audio path:** with Snapclient playback running, confirm audio still plays cleanly through the I2S DAC and volume changes do not produce limiter artifacts.
 - **OTA while playing:** start an OTA from the companion app with music playing and confirm the audio fades out cleanly, the update completes, and playback resumes on the new firmware after reboot.
-- **OTA failure recovery:** if an upload is interrupted after audio stops, confirm the device reboots and resumes playback on the existing firmware.
 - **Channel routing:** with audio playing, POST `stereo` / `left` / `right` and confirm the output audibly switches with no reboot and survives a reboot.
 - Confirm Bluetooth mode still plays normally and is unchanged (stereo, no routing).
 - Confirm playback through the I2S DAC works with no MCLK line connected.

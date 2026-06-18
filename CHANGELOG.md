@@ -2,9 +2,12 @@
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-18
+
 - Added a Snapclient-only EQ/DSP stage after Opus decode and channel routing: 3-band biquad EQ (low shelf, mid peaking, high shelf), per-channel gain/balance, volume-aware loudness bass boost, optional output headroom, and a final soft limiter. Bluetooth mode remains unchanged.
 - Added compiled DSP settings to `/api/status` under `dsp` and advertised `capabilities.snapclient_dsp` so companion apps can display the active firmware tuning.
 - Documented `SNAPCLIENT_DSP_CONFIG` as the firmware tuning point for the first DSP implementation.
+- Updated visible firmware version fields and release documentation for `2.0.0`.
 
 ## [1.3.1] - 2026-06-13
 
