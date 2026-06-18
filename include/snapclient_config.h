@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.1.0
+  Version: 2.1.1
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -12,11 +12,11 @@
 #include "snapclient_dsp.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.1.0"
+#define APP_FIRMWARE_VERSION "2.1.1"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.1.0"
+#define APP_FIRMWARE_VERSION_TAG "v2.1.1"
 #endif
 
 #if __has_include("secrets.h")
