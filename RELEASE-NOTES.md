@@ -69,7 +69,7 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2030393` bytes (well within the OTA slot limit)
+- Built firmware image: `2028637` bytes (well within the OTA slot limit)
 
 ## Manual Test Checklist
 
