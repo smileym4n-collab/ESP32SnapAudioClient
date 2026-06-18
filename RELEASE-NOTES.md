@@ -16,6 +16,7 @@ Target hardware:
 - Added 14 firmware EQ profiles from the preset table, each using a 5-band biquad chain with preset preamp headroom.
 - DSP settings are saved in ESP32 preferences/NVS and restored after reboot or OTA updates.
 - DSP updates apply live while Snapclient audio is running.
+- The local control API now returns CORS headers and handles browser `OPTIONS` preflight requests for web companion apps.
 - `/api/status` now advertises `capabilities.snapclient_dsp_update: true`.
 - The firmware clamps writable DSP values to safe ranges. Bass boost is limited to `0..+6 dB`, channel gains to `-12..+12 dB`, balance to `-1..+1`, loudness bass boost to `0..+9 dB`, headroom to `-12..0 dB`, and limiter ceiling to `0.50..1.00`.
 
@@ -68,7 +69,7 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2028637` bytes (well within the OTA slot limit)
+- Built firmware image: `2030393` bytes (well within the OTA slot limit)
 
 ## Manual Test Checklist
 
@@ -77,6 +78,7 @@ The build uses PlatformIO's `default_16MB.csv` partition table, which provides t
 - Confirm `GET /api/status` includes `dsp`, `capabilities.snapclient_dsp: true`, and `capabilities.snapclient_dsp_update: true`.
 - Confirm `GET /api/dsp` returns the same DSP object shape as `/api/status`.
 - With Snapclient playback running, send a partial `POST /api/dsp` changing `eq_profile`, `bass_boost_db`, `balance`, and `loudness.enabled`; confirm audio continues while the response returns clamped updated values.
+- From the web app, change DSP and volume-adjacent controls and confirm the browser no longer reports a port `8080` response failure.
 - Reboot and confirm the changed DSP settings persist.
 - Send `POST /api/dsp/reset` and confirm settings return to firmware defaults.
 - Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus` and a healthy `buffer` (e.g. `2000`).

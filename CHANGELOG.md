@@ -8,6 +8,7 @@
 - Reworked Snapclient DSP control around commercial-style EQ presets, with 14 firmware profiles, a 5-band biquad preset engine, layered bass boost, loudness on/off, and balance as the companion-app friendly controls.
 - Persisted DSP settings in ESP32 preferences/NVS, with invalid stored values falling back to `SNAPCLIENT_DSP_CONFIG`.
 - Applied DSP changes live to the Snapclient PCM stage while audio is running, with clamped ranges for bass boost, channel gain, balance, loudness boost, headroom, and limiter ceiling.
+- Added CORS headers and `OPTIONS` preflight handling to the local control API so browser-based companion apps can reliably send JSON updates without losing contact with the ESP32.
 - Added `capabilities.snapclient_dsp_update` to `/api/status`.
 - Updated visible firmware version fields and release documentation for `2.1.0`.
 

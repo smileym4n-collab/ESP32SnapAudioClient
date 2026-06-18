@@ -783,19 +783,30 @@ void SnapclientMode::beginControlApi() {
                                     sizeof(kCollectedHeaders[0]));
 
   controlServer_.on("/api/status", HTTP_GET, [this]() { sendControlStatus(); });
+  controlServer_.on("/api/status", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on("/api/channel-mode", HTTP_POST, [this]() { handleSetChannelMode(); });
+  controlServer_.on("/api/channel-mode", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on("/api/bluetooth-name", HTTP_POST, [this]() { handleSetBluetoothName(); });
+  controlServer_.on("/api/bluetooth-name", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on("/api/power-source", HTTP_POST, [this]() { handleSetPowerSource(); });
+  controlServer_.on("/api/power-source", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on("/api/dsp", HTTP_GET, [this]() { handleGetDsp(); });
   controlServer_.on("/api/dsp", HTTP_POST, [this]() { handleSetDsp(); });
+  controlServer_.on("/api/dsp", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on("/api/dsp/reset", HTTP_POST, [this]() { handleResetDsp(); });
+  controlServer_.on("/api/dsp/reset", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
+  controlServer_.on("/api/firmware", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on(
       "/api/firmware",
       HTTP_POST,
       [this]() { handleFirmwareUploadComplete(); },
       [this]() { handleFirmwareUploadRaw(); });
   controlServer_.onNotFound([this]() {
-    controlServer_.send(404, "application/json", "{\"error\":\"not_found\"}");
+    if (controlServer_.method() == HTTP_OPTIONS) {
+      sendControlApiOptions();
+      return;
+    }
+    sendControlJson(404, "{\"error\":\"not_found\"}");
   });
   controlServer_.begin();
 
@@ -806,6 +817,29 @@ void SnapclientMode::beginControlApi() {
 
 void SnapclientMode::handleControlApi() {
   controlServer_.handleClient();
+}
+
+void SnapclientMode::addControlApiCorsHeaders() {
+  controlServer_.sendHeader("Access-Control-Allow-Origin", "*");
+  controlServer_.sendHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  controlServer_.sendHeader("Access-Control-Allow-Headers",
+                            "Content-Type,X-Firmware-Filename");
+  controlServer_.sendHeader("Access-Control-Max-Age", "600");
+}
+
+void SnapclientMode::sendControlApiOptions() {
+  addControlApiCorsHeaders();
+  controlServer_.send(204);
+}
+
+void SnapclientMode::sendControlJson(int statusCode, const String &body) {
+  addControlApiCorsHeaders();
+  controlServer_.send(statusCode, "application/json", body);
+}
+
+void SnapclientMode::sendControlJson(int statusCode, const char *body) {
+  addControlApiCorsHeaders();
+  controlServer_.send(statusCode, "application/json", body);
 }
 
 String SnapclientMode::dspConfigJson() const {
@@ -930,11 +964,11 @@ void SnapclientMode::sendControlStatus() {
   response += "}";
   response += "}";
 
-  controlServer_.send(200, "application/json", response);
+  sendControlJson(200, response);
 }
 
 void SnapclientMode::sendDspStatus() {
-  controlServer_.send(200, "application/json", dspConfigJson());
+  sendControlJson(200, dspConfigJson());
 }
 
 void SnapclientMode::applyDspConfig(
@@ -956,9 +990,9 @@ void SnapclientMode::handleGetDsp() {
 void SnapclientMode::handleSetDsp() {
   const String body = controlServer_.arg("plain");
   if (body.length() == 0) {
-    controlServer_.send(400,
-                        "application/json",
-                        "{\"error\":\"invalid_dsp_config\",\"message\":\"Request body is required\"}");
+    sendControlJson(
+        400,
+        "{\"error\":\"invalid_dsp_config\",\"message\":\"Request body is required\"}");
     return;
   }
 
@@ -977,9 +1011,8 @@ void SnapclientMode::handleSetDsp() {
       extractJsonStringValue(body, "profile", stringValue) ||
       extractJsonStringValue(body, "preset", stringValue)) {
     if (!parseEqPresetName(stringValue, presetIndex)) {
-      controlServer_.send(
+      sendControlJson(
           400,
-          "application/json",
           "{\"error\":\"invalid_eq_profile\",\"message\":\"Unknown EQ profile\"}");
       return;
     }
@@ -990,9 +1023,8 @@ void SnapclientMode::handleSetDsp() {
     if (extractJsonStringValue(section, "profile", stringValue) ||
         extractJsonStringValue(section, "preset", stringValue)) {
       if (!parseEqPresetName(stringValue, presetIndex)) {
-        controlServer_.send(
+        sendControlJson(
             400,
-            "application/json",
             "{\"error\":\"invalid_eq_profile\",\"message\":\"Unknown EQ profile\"}");
         return;
       }
@@ -1062,9 +1094,8 @@ void SnapclientMode::handleSetChannelMode() {
   app_config::ChannelMode requestedMode = app_config::ChannelMode::Stereo;
 
   if (!extractChannelMode(body, requestedMode)) {
-    controlServer_.send(
+    sendControlJson(
         400,
-        "application/json",
         "{\"error\":\"invalid_channel_mode\",\"allowed\":[\"stereo\",\"left\",\"right\"]}");
     return;
   }
@@ -1080,9 +1111,8 @@ void SnapclientMode::handleSetBluetoothName() {
 
   if (!extractJsonStringValue(body, "bluetooth_name", requestedName) ||
       !isValidBluetoothName(requestedName)) {
-    controlServer_.send(
+    sendControlJson(
         400,
-        "application/json",
         "{\"error\":\"invalid_bluetooth_name\",\"max_length\":31}");
     return;
   }
@@ -1097,9 +1127,8 @@ void SnapclientMode::handleSetPowerSource() {
   app_config::PowerSource requestedSource = app_config::PowerSource::Battery;
 
   if (!extractPowerSource(body, requestedSource)) {
-    controlServer_.send(
+    sendControlJson(
         400,
-        "application/json",
         "{\"error\":\"invalid_power_source\",\"allowed\":[\"battery\",\"mains\"]}");
     return;
   }
@@ -1258,9 +1287,8 @@ void SnapclientMode::handleFirmwareUploadRaw() {
 
 void SnapclientMode::handleFirmwareUploadComplete() {
   if (otaUpdateAccepted_) {
-    controlServer_.send(
+    sendControlJson(
         otaResponseStatus_,
-        "application/json",
         "{\"ok\":true,\"message\":\"Firmware accepted. Rebooting.\"}");
     scheduleFirmwareRestart();
     return;
@@ -1277,7 +1305,7 @@ void SnapclientMode::handleFirmwareUploadComplete() {
   response += "\",\"message\":\"";
   response += otaMessage_;
   response += "\"}";
-  controlServer_.send(otaResponseStatus_, "application/json", response);
+  sendControlJson(otaResponseStatus_, response);
 }
 
 void SnapclientMode::failFirmwareUpload(int statusCode,

@@ -38,6 +38,10 @@ class SnapclientMode : public RuntimeMode {
   void logWifiFailureDiagnostics();
   void beginControlApi();
   void handleControlApi();
+  void addControlApiCorsHeaders();
+  void sendControlApiOptions();
+  void sendControlJson(int statusCode, const String &body);
+  void sendControlJson(int statusCode, const char *body);
   void sendControlStatus();
   void sendDspStatus();
   void handleSetChannelMode();
