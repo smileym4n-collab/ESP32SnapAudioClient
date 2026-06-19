@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
+
 ## [2.1.5] - 2026-06-19
 
 - Reduced Snapclient control lag by caching the Bluetooth name for `/api/status`, skipping no-op settings persistence, and debouncing channel/power/name NVS writes so chatty companion apps do not flash-write during playback.

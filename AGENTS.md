@@ -23,3 +23,9 @@ Release documentation rules:
 - When changing the version, update all visible examples that report `version` or `firmwareVersion`, including API docs and OTA contract docs.
 - After versioning changes, run `pio run` when practical and note whether the build passed.
 - If `pio run` changes the built firmware image size, update the image size in `RELEASE-NOTES.md`.
+
+Release publishing rules:
+
+- For release-ready work with a `VERSION` bump, commit the completed changes, create a matching local Git tag in leading-`v` form, push the active branch, and push the tag so the release is immediately available for testing.
+- Before pushing, confirm the working tree only contains intentional release changes and that the tag name exactly matches `VERSION` with a leading `v`.
+- Do not automatically push unreleased, intentionally incomplete, experimental, or failing-build work unless the user explicitly asks for that push.
