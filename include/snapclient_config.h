@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.1.1
+  Version: 2.1.2
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -12,11 +12,11 @@
 #include "snapclient_dsp.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.1.1"
+#define APP_FIRMWARE_VERSION "2.1.2"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.1.1"
+#define APP_FIRMWARE_VERSION_TAG "v2.1.2"
 #endif
 
 #if __has_include("secrets.h")
@@ -203,6 +203,11 @@ static constexpr UBaseType_t SNAPCLIENT_TASK_PRIORITY = 5;
 static constexpr uint32_t SNAPCLIENT_TASK_STACK_WORDS = 8192;
 static constexpr uint32_t SNAPCLIENT_TASK_DELAY_MS = 0;
 static constexpr uint32_t SNAPCLIENT_TASK_STOP_TIMEOUT_MS = 1000;
+// If output writes stop while encoded audio is still buffered or recently
+// arriving, restart to recover the stuck playback path. Requiring active stream
+// data avoids rebooting simply because playback is paused.
+static constexpr uint32_t SNAPCLIENT_OUTPUT_STALL_TIMEOUT_MS = 10000;
+static constexpr uint32_t SNAPCLIENT_INPUT_RECENT_TIMEOUT_MS = 15000;
 // Leave periodic Snapclient stats off during live audio testing so the UART
 // does not add avoidable scheduling pressure. Warnings/errors still log.
 static constexpr bool SNAPCLIENT_PERIODIC_STATS_ENABLED = false;

@@ -170,6 +170,9 @@ struct SnapclientDspConfig {
 };
 
 inline float clampDspValue(float value, float minimum, float maximum) {
+  if (!isfinite(value)) {
+    return minimum;
+  }
   if (value < minimum) {
     return minimum;
   }
@@ -187,21 +190,40 @@ inline void sanitizeSnapclientDspConfig(SnapclientDspConfig &config,
   if (config.eqPresetIndex >= SNAPCLIENT_EQ_PRESET_COUNT) {
     config.eqPresetIndex = defaults.eqPresetIndex;
   }
-  config.bassBoostDb = clampDspValue(config.bassBoostDb, 0.0f, 6.0f);
-  config.leftGainDb = clampDspValue(config.leftGainDb, -12.0f, 12.0f);
-  config.rightGainDb = clampDspValue(config.rightGainDb, -12.0f, 12.0f);
-  config.balance = clampDspValue(config.balance, -1.0f, 1.0f);
+  config.bassBoostDb =
+      isfinite(config.bassBoostDb)
+          ? clampDspValue(config.bassBoostDb, 0.0f, 6.0f)
+          : defaults.bassBoostDb;
+  config.leftGainDb =
+      isfinite(config.leftGainDb)
+          ? clampDspValue(config.leftGainDb, -12.0f, 12.0f)
+          : defaults.leftGainDb;
+  config.rightGainDb =
+      isfinite(config.rightGainDb)
+          ? clampDspValue(config.rightGainDb, -12.0f, 12.0f)
+          : defaults.rightGainDb;
+  config.balance =
+      isfinite(config.balance) ? clampDspValue(config.balance, -1.0f, 1.0f)
+                               : defaults.balance;
   config.loudnessBassMaxDb =
-      clampDspValue(config.loudnessBassMaxDb, 0.0f, 9.0f);
-  config.headroomDb = clampDspValue(config.headroomDb, -12.0f, 0.0f);
+      isfinite(config.loudnessBassMaxDb)
+          ? clampDspValue(config.loudnessBassMaxDb, 0.0f, 9.0f)
+          : defaults.loudnessBassMaxDb;
+  config.headroomDb =
+      isfinite(config.headroomDb)
+          ? clampDspValue(config.headroomDb, -12.0f, 0.0f)
+          : defaults.headroomDb;
   config.softLimiterCeiling =
-      clampDspValue(config.softLimiterCeiling, 0.50f, 1.0f);
+      isfinite(config.softLimiterCeiling)
+          ? clampDspValue(config.softLimiterCeiling, 0.50f, 1.0f)
+          : defaults.softLimiterCeiling;
 }
 
 class SnapclientDsp {
  public:
   void configure(const SnapclientDspConfig &config) {
     config_ = config;
+    sanitizeSnapclientDspConfig(config_, safeDefaults());
     loudnessBassDb_ = calculateLoudnessBassDb(lastVolume_);
     configureFilters();
   }
@@ -220,7 +242,7 @@ class SnapclientDsp {
   }
 
   void setVolume(float volume) {
-    lastVolume_ = clamp(volume, 0.0f, 1.0f);
+    lastVolume_ = isfinite(volume) ? clamp(volume, 0.0f, 1.0f) : 1.0f;
     const float nextLoudnessBassDb = calculateLoudnessBassDb(lastVolume_);
     if (fabsf(nextLoudnessBassDb - loudnessBassDb_) >= 0.05f) {
       loudnessBassDb_ = nextLoudnessBassDb;
@@ -301,16 +323,29 @@ class SnapclientDsp {
                          float rawA0,
                          float rawA1,
                          float rawA2) {
-      if (rawA0 == 0.0f) {
+      if (rawA0 == 0.0f || !isfinite(rawA0) || !isfinite(rawB0) ||
+          !isfinite(rawB1) || !isfinite(rawB2) || !isfinite(rawA1) ||
+          !isfinite(rawA2)) {
         setBypass();
         return;
       }
 
-      b0 = rawB0 / rawA0;
-      b1 = rawB1 / rawA0;
-      b2 = rawB2 / rawA0;
-      a1 = rawA1 / rawA0;
-      a2 = rawA2 / rawA0;
+      const float nextB0 = rawB0 / rawA0;
+      const float nextB1 = rawB1 / rawA0;
+      const float nextB2 = rawB2 / rawA0;
+      const float nextA1 = rawA1 / rawA0;
+      const float nextA2 = rawA2 / rawA0;
+      if (!isfinite(nextB0) || !isfinite(nextB1) || !isfinite(nextB2) ||
+          !isfinite(nextA1) || !isfinite(nextA2)) {
+        setBypass();
+        return;
+      }
+
+      b0 = nextB0;
+      b1 = nextB1;
+      b2 = nextB2;
+      a1 = nextA1;
+      a2 = nextA2;
       active = true;
     }
 
@@ -330,7 +365,17 @@ class SnapclientDsp {
   float loudnessBassDb_ = 0.0f;
   float lastVolume_ = 1.0f;
 
+  static const SnapclientDspConfig &safeDefaults() {
+    static const SnapclientDspConfig defaults = {
+        false, 0, 0.0f, 0.0f, 0.0f, 0.0f, true, 3.0f, 0.30f, 0.80f,
+        0.0f,  true, 0.98f};
+    return defaults;
+  }
+
   static float clamp(float value, float minimum, float maximum) {
+    if (!isfinite(value)) {
+      return minimum;
+    }
     if (value < minimum) {
       return minimum;
     }
@@ -341,6 +386,9 @@ class SnapclientDsp {
   }
 
   static float dbToLinear(float db) {
+    if (!isfinite(db)) {
+      return 1.0f;
+    }
     return powf(10.0f, db / 20.0f);
   }
 
@@ -419,7 +467,8 @@ class SnapclientDsp {
   }
 
   bool validFilter(float frequencyHz, float gainDb) const {
-    return sampleRate_ > 0 && frequencyHz > 0.0f &&
+    return sampleRate_ > 0 && isfinite(frequencyHz) && isfinite(gainDb) &&
+           frequencyHz > 0.0f &&
            frequencyHz < (static_cast<float>(sampleRate_) * 0.45f) &&
            fabsf(gainDb) >= 0.01f;
   }
@@ -498,6 +547,12 @@ class SnapclientDsp {
   }
 
   static float limitSample(float sample, float ceiling) {
+    if (!isfinite(sample)) {
+      return 0.0f;
+    }
+    if (!isfinite(ceiling) || ceiling <= 0.0f) {
+      ceiling = 32767.0f;
+    }
     const float magnitude = fabsf(sample);
     const float kneeStart = ceiling * 0.85f;
     if (magnitude <= kneeStart) {

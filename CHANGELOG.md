@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-06-19
+
+- Hardened live Snapclient DSP updates so invalid numeric API or stored values cannot poison the EQ coefficients with NaN/Infinity.
+- Validated generated biquad coefficients before enabling a filter, falling back to bypass for invalid filter math instead of feeding unstable values into the audio path.
+- Reserved the Snapclient PCM DSP work buffer during stream startup to avoid a first-use heap allocation when EQ processing is active.
+- Added Snapclient output-stall recovery: if audio output stops while stream data is still buffered or recently arriving, the device logs diagnostics and restarts instead of remaining silent until a manual reboot or mode switch.
+- Updated visible firmware version fields and release documentation for `2.1.2`.
+
 ## [2.1.1] - 2026-06-18
 
 - Added CORS headers and `OPTIONS` preflight handling to the local control API so browser-based companion apps can reliably send JSON updates without losing contact with the ESP32.

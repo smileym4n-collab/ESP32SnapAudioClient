@@ -82,6 +82,13 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
            !p_snap_output->isActive(timeoutMs);
   }
 
+  bool hasBufferedAudio() { return buffer.available() > 0; }
+
+  bool inputActiveRecently(uint32_t timeoutMs) const {
+    return lastEnqueueActivityMs_ > 0 &&
+           (millis() - lastEnqueueActivityMs_) < timeoutMs;
+  }
+
  protected:
   void processExt() override {
     // The base SnapProcessor adds a 5 ms delay here. With Opus, decoding runs
@@ -160,6 +167,7 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
 
     ++enqueuedChunkCount_;
     queuedBytesTotal_ += static_cast<uint32_t>(sizeWritten);
+    lastEnqueueActivityMs_ = millis();
     lastActivityMs_ = millis();
 
     if (!task_started && buffer.available() > bufferTaskActivationLimit()) {
@@ -185,6 +193,8 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
   uint32_t peakFillBytes_ = 0;
   uint32_t queuedBytesTotal_ = 0;
   uint32_t playedBytesTotal_ = 0;
+  uint32_t lastEnqueueActivityMs_ = 0;
+  uint32_t lastPlayActivityMs_ = 0;
   uint32_t enqueuedChunkCount_ = 0;
   uint32_t playedChunkCount_ = 0;
   uint32_t queueFullCount_ = 0;
@@ -284,6 +294,9 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
 
       ++playedChunkCount_;
       playedBytesTotal_ += static_cast<uint32_t>(bytesWritten);
+      if (bytesWritten > 0) {
+        lastPlayActivityMs_ = millis();
+      }
       lastActivityMs_ = millis();
       maybeLogRuntime(nullptr);
       copiedChunk = bytesWritten > 0;

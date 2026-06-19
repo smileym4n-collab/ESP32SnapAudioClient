@@ -535,6 +535,7 @@ void SnapclientMode::loop() {
     }
   }
 
+  recoverFromOutputStall();
   snapProcessor_->logRuntime();
 
   delay(app_config::MAIN_LOOP_DELAY_MS);
@@ -604,6 +605,29 @@ void SnapclientMode::logDiagnosticSnapshot(const char *reason) {
       taskState);
 
   snapProcessor_->logRuntime(reason, true);
+}
+
+void SnapclientMode::recoverFromOutputStall() {
+  if (otaUpdateInProgress_ || restartPrepared_ || snapProcessor_ == nullptr) {
+    return;
+  }
+
+  if (!snapProcessor_->isOutputTimedOut(
+          app_config::SNAPCLIENT_OUTPUT_STALL_TIMEOUT_MS)) {
+    return;
+  }
+
+  if (!snapProcessor_->hasBufferedAudio() &&
+      !snapProcessor_->inputActiveRecently(
+          app_config::SNAPCLIENT_INPUT_RECENT_TIMEOUT_MS)) {
+    return;
+  }
+
+  Serial.println("[snapclient] output stalled with active stream data; restarting");
+  logDiagnosticSnapshot("snap-output-stall");
+  prepareForRestart();
+  delay(app_config::RESTART_DELAY_MS);
+  ESP.restart();
 }
 
 bool SnapclientMode::startSnapClientTask() {

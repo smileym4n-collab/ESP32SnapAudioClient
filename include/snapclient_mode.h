@@ -58,6 +58,7 @@ class SnapclientMode : public RuntimeMode {
                           const char *message);
   void scheduleFirmwareRestart();
   void logDiagnosticSnapshot(const char *reason);
+  void recoverFromOutputStall();
   bool startSnapClientTask();
   void stopSnapClientTask(uint32_t timeoutMs);
   static void snapClientTaskEntry(void *context);

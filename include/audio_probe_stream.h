@@ -51,6 +51,7 @@ class AudioProbeStream : public audio_tools::AudioStream {
     if (dspMutex_ == nullptr) {
       dspMutex_ = xSemaphoreCreateMutex();
     }
+    processBuffer_.reserve(kProcessBufferReserveBytes);
     // The shared I2S output is started by AudioOutputController before
     // Snapclient begins. Re-opening it here can force a second DMA allocation
     // during codec-header handling and crash the ESP32 driver.
@@ -212,6 +213,8 @@ class AudioProbeStream : public audio_tools::AudioStream {
 
     return peak;
   }
+
+  static constexpr size_t kProcessBufferReserveBytes = 4096;
 
   void accumulate(const uint8_t *buffer, size_t size) {
     windowBytes_ += static_cast<uint32_t>(size);
