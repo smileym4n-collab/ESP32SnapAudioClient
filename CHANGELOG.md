@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-06-19
+
+- Changed the default Snapclient DSP configuration to a true bypass: DSP disabled, Flat preset, no loudness bass boost, no soft limiter, no gain, and no headroom trim unless a companion app explicitly enables processing.
+- Changed the DSP engine so Flat/zero settings with loudness and limiter disabled do not copy or process PCM samples.
+- Bumped the stored DSP preference schema so devices with old loudness/limiter defaults fall back to the new bypass defaults after OTA.
+- Avoid blocking the Snapclient audio write path when a live DSP update is recalculating filters; if the DSP mutex is busy, the frame is written without DSP processing instead of stalling audio.
+- Updated visible firmware version fields and release documentation for `2.1.3`.
+
 ## [2.1.2] - 2026-06-19
 
 - Hardened live Snapclient DSP updates so invalid numeric API or stored values cannot poison the EQ coefficients with NaN/Infinity.

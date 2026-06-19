@@ -9,7 +9,7 @@ namespace {
 constexpr char kPrefsNamespace[] = "snap-dsp";
 constexpr char kPrefsBlobKey[] = "config";
 constexpr uint32_t kDspPrefsMagic = 0x44535033;  // "DSP3"
-constexpr uint16_t kDspPrefsVersion = 2;
+constexpr uint16_t kDspPrefsVersion = 3;
 
 struct StoredDspConfig {
   uint32_t magic;

@@ -1,4 +1,4 @@
-# Release Notes - ESP32 Audio Client v2.1.2
+# Release Notes - ESP32 Audio Client v2.1.3
 
 Release date: 2026-06-19
 
@@ -9,18 +9,19 @@ Target hardware:
 - External I2S DAC
 - Opus Snapserver stream
 
-## [2.1.2]
+## [2.1.3]
 
-- Live Snapclient EQ/DSP updates are now hardened against invalid numeric values from API requests or saved preferences.
-- Generated biquad filter coefficients are validated before use; invalid filter math is bypassed instead of being allowed into the audio stream.
-- The Snapclient PCM DSP work buffer is reserved during stream startup to avoid a first-use heap allocation while audio is running.
-- Snapclient now recovers from an output stall: if output writes stop while stream data is still buffered or recently arriving, it logs diagnostics and restarts instead of remaining silent until a manual reboot or mode switch.
+- Default Snapclient DSP is now a true bypass: DSP disabled, Flat preset, no loudness bass boost, no soft limiter, no gain, and no headroom trim unless a companion app explicitly enables processing.
+- Flat/zero settings with loudness and limiter disabled skip the DSP PCM copy/process path.
+- Stored DSP preferences use a new schema version so devices with old loudness/limiter defaults fall back to the new bypass defaults after OTA.
+- Live DSP updates no longer block the Snapclient audio write path while filters are recalculated; if the DSP mutex is busy, that audio frame is written without DSP processing.
 
 ## Summary
 
-This patch release targets crashes or lockups seen when applying EQ while
-Snapclient playback is running, and also adds conservative recovery for normal
-playback stalls where stream data is active but output writes have stopped.
+This patch release restores a true baseline Snapclient sound path. The default
+firmware no longer applies loudness, limiting, EQ, gain, or PCM copying unless
+the user turns DSP on. It also reduces one likely source of live-update
+instability by keeping the audio writer from waiting on DSP filter recalculation.
 
 Bluetooth output remains unchanged and does not use the Snapclient DSP path.
 
@@ -43,14 +44,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `2.1.1`
-- New version: `2.1.2`
+- Previous version: `2.1.2`
+- New version: `2.1.3`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `2.1.2`
-- `firmwareVersion`: `2.1.2`
+- `version`: `2.1.3`
+- `firmwareVersion`: `2.1.3`
 
 ## Build Notes
 
@@ -63,16 +64,17 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2037184` bytes (well within the OTA slot limit)
+- Built firmware image: `2037440` bytes (well within the OTA slot limit)
 
 ## Manual Test Checklist
 
-- Flash `2.1.2` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 2.1.2` and `GET /api/status` reports `firmwareVersion` as `2.1.2`.
+- Flash `2.1.3` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 2.1.3` and `GET /api/status` reports `firmwareVersion` as `2.1.3`.
 - Confirm `GET /api/status` includes `dsp`, `capabilities.snapclient_dsp: true`, and `capabilities.snapclient_dsp_update: true`.
-- Confirm `GET /api/dsp` returns the same DSP object shape as `/api/status`.
+- Confirm `GET /api/dsp` returns the same DSP object shape as `/api/status` with `enabled: false`, Flat profile, loudness disabled, and soft limiter disabled after OTA/reset.
+- Confirm default Snapclient playback sounds like the pre-DSP baseline with no bass lift or limiter pumping.
 - With Snapclient playback running, send a partial `POST /api/dsp` changing `eq_profile`, `bass_boost_db`, `balance`, and `loudness.enabled`; confirm audio continues while the response returns clamped updated values.
-- Leave Snapclient playback running long enough to cover prior random-dropout timing; if output stalls, confirm the serial log reports `snap-output-stall` and the device restarts rather than staying silent.
+- While playback is running, repeatedly change DSP settings from the companion app and confirm audio does not stall or crash.
 - From the web app, change DSP and volume-adjacent controls and confirm the browser no longer reports a port `8080` response failure.
 - Reboot and confirm the changed DSP settings persist.
 - Send `POST /api/dsp/reset` and confirm settings return to firmware defaults.

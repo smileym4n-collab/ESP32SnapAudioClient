@@ -17,8 +17,8 @@ Example response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "2.1.2",
-  "firmwareVersion": "2.1.2",
+  "version": "2.1.3",
+  "firmwareVersion": "2.1.3",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
@@ -28,7 +28,7 @@ Example response:
   "power_source": "battery",
   "channel_mode": "stereo",
   "dsp": {
-    "enabled": true,
+    "enabled": false,
     "eq_profile": "Flat",
     "eq_profile_display": "Flat",
     "eq_profiles": [
@@ -51,14 +51,14 @@ Example response:
     "right_gain_db": 0.0,
     "balance": 0.00,
     "loudness": {
-      "enabled": true,
+      "enabled": false,
       "bass_max_db": 3.0,
       "full_boost_volume": 0.30,
       "flat_volume": 0.80
     },
     "headroom_db": 0.0,
     "soft_limiter": {
-      "enabled": true,
+      "enabled": false,
       "ceiling": 0.98
     }
   },
@@ -106,10 +106,12 @@ Fields:
 | `capabilities.snapclient_dsp_update` | boolean | `true` when `POST /api/dsp` can update DSP settings |
 | `capabilities.firmware_update` | boolean | `true` when `POST /api/firmware` is available |
 
-The `dsp` object reports the live DSP settings. Values are loaded from ESP32
-preferences when present, otherwise from `SNAPCLIENT_DSP_CONFIG`.
-Companion apps should usually expose `eq_profile`, `bass_boost_db`,
-`loudness.enabled`, and `balance` as the main user controls.
+The `dsp` object reports the live DSP settings. Firmware defaults are a true
+bypass: `enabled: false`, Flat profile, loudness disabled, soft limiter disabled,
+and zero gain/balance/headroom. Values are loaded from ESP32 preferences when
+present, otherwise from `SNAPCLIENT_DSP_CONFIG`. Companion apps should usually
+expose `eq_profile`, `bass_boost_db`, `loudness.enabled`, and `balance` as the
+main user controls.
 
 When battery sensing is unavailable:
 

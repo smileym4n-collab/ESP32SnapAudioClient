@@ -9,7 +9,7 @@ receiver:
 It boots into Snapcast mode and you flip to Bluetooth (and back) with a single
 button press. Both modes share the same I2S DAC output path.
 
-Version: **2.1.2**
+Version: **2.1.3**
 
 ## Features
 
@@ -91,8 +91,10 @@ comes up on port `8080`.
 The Snapclient PCM path can also apply a lightweight DSP stage before I2S:
 5-band preset EQ, layered bass boost, balance, volume-aware loudness bass boost,
 optional headroom trim, and a final soft limiter. Bluetooth mode does not use
-this DSP path. Tune defaults in `SNAPCLIENT_DSP_CONFIG` and the firmware preset
-table in [snapclient_config.h](include/snapclient_config.h), or adjust the saved
+this DSP path. Firmware defaults are a true bypass; enable DSP from the local API
+only when you want EQ, loudness, limiting, gain, or balance processing. Tune
+defaults in `SNAPCLIENT_DSP_CONFIG` and the firmware preset table in
+[snapclient_config.h](include/snapclient_config.h), or adjust the saved
 profile-style settings live through the local control API.
 
 Expected Snapserver stream: `codec=opus`, `sampleformat=44100:16:2`. See

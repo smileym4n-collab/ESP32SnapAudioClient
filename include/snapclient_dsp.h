@@ -238,7 +238,7 @@ class SnapclientDsp {
 
   bool canProcess() const {
     return config_.enabled && sampleRate_ > 0 && bitsPerSample_ == 16 &&
-           channels_ == 2;
+           channels_ == 2 && hasActiveProcessing();
   }
 
   void setVolume(float volume) {
@@ -283,6 +283,7 @@ class SnapclientDsp {
   }
 
   float loudnessBassDb() const { return loudnessBassDb_; }
+  bool isBypassed() const { return !canProcess(); }
 
  private:
   static constexpr float kPi = 3.14159265358979323846f;
@@ -424,6 +425,34 @@ class SnapclientDsp {
     const SnapclientEqPreset &preset = snapclientEqPreset(config_.eqPresetIndex);
     return dbToLinear(config_.headroomDb + preset.preampDb + config_.rightGainDb) *
            balanceGain;
+  }
+
+  bool hasActiveProcessing() const {
+    if (!config_.enabled) {
+      return false;
+    }
+
+    const SnapclientEqPreset &preset = snapclientEqPreset(config_.eqPresetIndex);
+    if (fabsf(config_.headroomDb) >= 0.01f ||
+        fabsf(config_.leftGainDb) >= 0.01f ||
+        fabsf(config_.rightGainDb) >= 0.01f ||
+        fabsf(config_.balance) >= 0.001f ||
+        fabsf(preset.preampDb) >= 0.01f ||
+        fabsf(config_.bassBoostDb) >= 0.01f ||
+        fabsf(loudnessBassDb_) >= 0.01f ||
+        config_.softLimiterEnabled) {
+      return true;
+    }
+
+    for (uint8_t bandIndex = 0; bandIndex < SNAPCLIENT_EQ_BAND_COUNT;
+         ++bandIndex) {
+      const SnapclientEqBand &band = preset.bands[bandIndex];
+      if (band.enabled && fabsf(band.gainDb) >= 0.01f) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   void resetState() {

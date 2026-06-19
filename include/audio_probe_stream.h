@@ -120,10 +120,12 @@ class AudioProbeStream : public audio_tools::AudioStream {
     const app_config::ChannelMode channelMode =
         controller_ != nullptr ? controller_->channelMode()
                                : app_config::ChannelMode::Stereo;
-    lockDsp();
-    dsp_.setVolume(currentSnapVolume());
-    const bool dspSamples = dsp_.canProcess() && len >= sizeof(int16_t) * 2;
-    unlockDsp();
+    bool dspSamples = false;
+    if (tryLockDsp()) {
+      dsp_.setVolume(currentSnapVolume());
+      dspSamples = dsp_.canProcess() && len >= sizeof(int16_t) * 2;
+      unlockDsp();
+    }
     const bool routeChannels =
         channelMode != app_config::ChannelMode::Stereo &&
         info.bits_per_sample == 16 && info.channels == 2 &&
@@ -142,9 +144,10 @@ class AudioProbeStream : public audio_tools::AudioStream {
         memcpy(processBuffer_.data(), data, len);
       }
       if (dspSamples) {
-        lockDsp();
-        dsp_.processStereo16(processBuffer_.data(), processBuffer_.size());
-        unlockDsp();
+        if (tryLockDsp()) {
+          dsp_.processStereo16(processBuffer_.data(), processBuffer_.size());
+          unlockDsp();
+        }
       }
       if (scaleSamples) {
         applyScalar(processBuffer_.data(), processBuffer_.size(), gain);
@@ -189,6 +192,10 @@ class AudioProbeStream : public audio_tools::AudioStream {
     if (dspMutex_ != nullptr) {
       xSemaphoreTake(dspMutex_, portMAX_DELAY);
     }
+  }
+
+  bool tryLockDsp() {
+    return dspMutex_ == nullptr || xSemaphoreTake(dspMutex_, 0) == pdTRUE;
   }
 
   void unlockDsp() {

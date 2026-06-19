@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.1.2
+  Version: 2.1.3
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -12,11 +12,11 @@
 #include "snapclient_dsp.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.1.2"
+#define APP_FIRMWARE_VERSION "2.1.3"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.1.2"
+#define APP_FIRMWARE_VERSION_TAG "v2.1.3"
 #endif
 
 #if __has_include("secrets.h")
@@ -160,20 +160,22 @@ static constexpr float SNAPCLIENT_OUTPUT_GAIN = 0.85f;
 static constexpr float SNAPCLIENT_FINAL_PCM_GAIN = 1.00f;
 // Snapclient-only DSP stage applied after Opus decode and channel routing, just
 // before the shared I2S output. Bluetooth mode is intentionally unchanged.
+// Defaults are a true bypass: no EQ, loudness, limiter, gain, or PCM copy unless
+// the user explicitly enables processing through the control API.
 // Balance is -1.0..1.0 (negative = quieter right, positive = quieter left).
 static const SnapclientDspConfig SNAPCLIENT_DSP_CONFIG = {
-    true,     // enabled
+    false,    // enabled
     0,        // EQ preset index (Flat)
     0.0f,     // layered bass boost, dB
     0.0f,     // left gain, dB
     0.0f,     // right gain, dB
     0.0f,     // balance
-    true,     // loudness bass boost enabled
+    false,    // loudness bass boost enabled
     3.0f,     // loudness max bass boost, dB
     0.30f,    // full loudness boost at or below this Snapserver volume
     0.80f,    // loudness boost fades to flat at or above this volume
     0.0f,     // output headroom trim, dB
-    true,     // soft limiter enabled
+    false,    // soft limiter enabled
     0.98f     // soft limiter ceiling, 0.0..1.0 of PCM full scale
 };
 // Re-enable the Snapclient resampler, but only allow very small drift
