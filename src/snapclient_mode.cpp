@@ -1,6 +1,7 @@
 #include "snapclient_mode.h"
 
 #include <ctype.h>
+#include <math.h>
 
 #include <Update.h>
 #include <esp_ota_ops.h>
@@ -308,6 +309,28 @@ bool parseEqPresetName(const String &name, uint8_t &presetIndex) {
   return false;
 }
 
+bool dspConfigsEqual(const app_config::SnapclientDspConfig &left,
+                     const app_config::SnapclientDspConfig &right) {
+  constexpr float kFloatTolerance = 0.001f;
+  return left.enabled == right.enabled &&
+         left.eqPresetIndex == right.eqPresetIndex &&
+         fabsf(left.bassBoostDb - right.bassBoostDb) <= kFloatTolerance &&
+         fabsf(left.leftGainDb - right.leftGainDb) <= kFloatTolerance &&
+         fabsf(left.rightGainDb - right.rightGainDb) <= kFloatTolerance &&
+         fabsf(left.balance - right.balance) <= kFloatTolerance &&
+         left.loudnessEnabled == right.loudnessEnabled &&
+         fabsf(left.loudnessBassMaxDb - right.loudnessBassMaxDb) <=
+             kFloatTolerance &&
+         fabsf(left.loudnessFullBoostVolume - right.loudnessFullBoostVolume) <=
+             kFloatTolerance &&
+         fabsf(left.loudnessFlatVolume - right.loudnessFlatVolume) <=
+             kFloatTolerance &&
+         fabsf(left.headroomDb - right.headroomDb) <= kFloatTolerance &&
+         left.softLimiterEnabled == right.softLimiterEnabled &&
+         fabsf(left.softLimiterCeiling - right.softLimiterCeiling) <=
+             kFloatTolerance;
+}
+
 }  // namespace
 
 SnapclientMode::SnapclientMode()
@@ -384,10 +407,14 @@ bool SnapclientMode::startSnapclientServices() {
     return false;
   }
   audioOutput_.setChannelMode(loadChannelModePreference());
+  pendingChannelMode_ = audioOutput_.channelMode();
   Serial.printf("[channel] snapclient channel mode=%s\n",
                 app_config::channelModeName(audioOutput_.channelMode()));
   applyDspConfig(loadSnapclientDspConfig(), false);
   powerSource_ = loadPowerSourcePreference();
+  pendingPowerSource_ = powerSource_;
+  bluetoothName_ = loadBluetoothNamePreference();
+  pendingBluetoothName_ = bluetoothName_;
   Serial.printf("[power] source=%s\n", app_config::powerSourceName(powerSource_));
   if (powerSource_ == app_config::PowerSource::Battery) {
     batteryMonitor_.begin();
@@ -499,6 +526,7 @@ void SnapclientMode::loop() {
   }
   handleControlApi();
   flushPendingDspSave(false);
+  flushPendingControlSaves(false);
 
   if (otaRebootPending_ &&
       static_cast<int32_t>(millis() - otaRestartAtMs_) >= 0) {
@@ -579,6 +607,7 @@ void SnapclientMode::prepareForRestart() {
 
   restartPrepared_ = true;
   flushPendingDspSave(true);
+  flushPendingControlSaves(true);
   logDiagnosticSnapshot("prepare-restart");
   stopSnapClientTask(app_config::SNAPCLIENT_TASK_STOP_TIMEOUT_MS);
   snapProcessor_->end();
@@ -868,7 +897,11 @@ void SnapclientMode::sendControlJson(int statusCode, const char *body) {
   controlServer_.send(statusCode, "application/json", body);
 }
 
-String SnapclientMode::dspConfigJson() const {
+String SnapclientMode::dspConfigJson() {
+  if (!dspConfigJsonDirty_) {
+    return dspConfigJsonCache_;
+  }
+
   const app_config::SnapclientEqPreset &preset =
       app_config::snapclientEqPreset(currentDspConfig_.eqPresetIndex);
   String response = "{";
@@ -934,7 +967,9 @@ String SnapclientMode::dspConfigJson() const {
   response += ",\"ceiling\":";
   response += String(currentDspConfig_.softLimiterCeiling, 2);
   response += "}}";
-  return response;
+  dspConfigJsonCache_ = response;
+  dspConfigJsonDirty_ = false;
+  return dspConfigJsonCache_;
 }
 
 void SnapclientMode::sendControlStatus() {
@@ -974,7 +1009,7 @@ void SnapclientMode::sendControlStatus() {
   response += "\",\"dsp\":";
   response += dspConfigJson();
   response += ",\"bluetooth_name\":\"";
-  response += loadBluetoothNamePreference();
+  response += bluetoothName_;
   response += "\",\"battery\":{";
   response += "\"available\":";
   response += battery.available ? "true" : "false";
@@ -1003,6 +1038,7 @@ void SnapclientMode::applyDspConfig(
   currentDspConfig_ = config;
   app_config::sanitizeSnapclientDspConfig(
       currentDspConfig_, app_config::SNAPCLIENT_DSP_CONFIG);
+  dspConfigJsonDirty_ = true;
   pcmProbe_.setDspConfig(currentDspConfig_);
   if (persist) {
     pendingDspSave_ = true;
@@ -1021,6 +1057,37 @@ void SnapclientMode::flushPendingDspSave(bool force) {
 
   pendingDspSave_ = false;
   saveSnapclientDspConfig(currentDspConfig_);
+}
+
+void SnapclientMode::schedulePendingControlSave() {
+  controlSaveDueMs_ =
+      millis() + app_config::SNAPCLIENT_CONTROL_SAVE_DEBOUNCE_MS;
+}
+
+void SnapclientMode::flushPendingControlSaves(bool force) {
+  if (!pendingChannelModeSave_ && !pendingPowerSourceSave_ &&
+      !pendingBluetoothNameSave_) {
+    return;
+  }
+
+  if (!force && static_cast<int32_t>(millis() - controlSaveDueMs_) < 0) {
+    return;
+  }
+
+  if (pendingChannelModeSave_) {
+    pendingChannelModeSave_ = false;
+    saveChannelModePreference(pendingChannelMode_);
+  }
+
+  if (pendingPowerSourceSave_) {
+    pendingPowerSourceSave_ = false;
+    savePowerSourcePreference(pendingPowerSource_);
+  }
+
+  if (pendingBluetoothNameSave_) {
+    pendingBluetoothNameSave_ = false;
+    saveBluetoothNamePreference(pendingBluetoothName_);
+  }
 }
 
 void SnapclientMode::handleGetDsp() {
@@ -1106,6 +1173,13 @@ void SnapclientMode::handleSetDsp() {
     }
   }
 
+  app_config::sanitizeSnapclientDspConfig(
+      nextConfig, app_config::SNAPCLIENT_DSP_CONFIG);
+  if (dspConfigsEqual(nextConfig, currentDspConfig_)) {
+    sendDspStatus();
+    return;
+  }
+
   applyDspConfig(nextConfig, true);
   const app_config::SnapclientEqPreset &activePreset =
       app_config::snapclientEqPreset(currentDspConfig_.eqPresetIndex);
@@ -1123,8 +1197,13 @@ void SnapclientMode::handleSetDsp() {
 }
 
 void SnapclientMode::handleResetDsp() {
-  resetSnapclientDspConfig();
-  applyDspConfig(app_config::SNAPCLIENT_DSP_CONFIG, false);
+  app_config::SnapclientDspConfig defaultConfig =
+      app_config::SNAPCLIENT_DSP_CONFIG;
+  app_config::sanitizeSnapclientDspConfig(
+      defaultConfig, app_config::SNAPCLIENT_DSP_CONFIG);
+  if (!dspConfigsEqual(defaultConfig, currentDspConfig_)) {
+    applyDspConfig(defaultConfig, true);
+  }
   Serial.println("[dsp] reset to firmware defaults");
   sendDspStatus();
 }
@@ -1140,8 +1219,13 @@ void SnapclientMode::handleSetChannelMode() {
     return;
   }
 
+  const app_config::ChannelMode currentMode = audioOutput_.channelMode();
   audioOutput_.setChannelMode(requestedMode);
-  saveChannelModePreference(requestedMode);
+  if (requestedMode != currentMode) {
+    pendingChannelMode_ = requestedMode;
+    pendingChannelModeSave_ = true;
+    schedulePendingControlSave();
+  }
   sendControlStatus();
 }
 
@@ -1157,8 +1241,13 @@ void SnapclientMode::handleSetBluetoothName() {
     return;
   }
 
-  saveBluetoothNamePreference(requestedName);
-  Serial.printf("[bluetooth] saved device name=%s\n", requestedName.c_str());
+  if (requestedName != bluetoothName_) {
+    bluetoothName_ = requestedName;
+    pendingBluetoothName_ = requestedName;
+    pendingBluetoothNameSave_ = true;
+    schedulePendingControlSave();
+    Serial.printf("[bluetooth] queued device name=%s\n", requestedName.c_str());
+  }
   sendControlStatus();
 }
 
@@ -1174,10 +1263,15 @@ void SnapclientMode::handleSetPowerSource() {
   }
 
   const bool wasBattery = powerSource_ == app_config::PowerSource::Battery;
+  const app_config::PowerSource previousSource = powerSource_;
   powerSource_ = requestedSource;
-  savePowerSourcePreference(powerSource_);
-  Serial.printf("[power] saved source=%s\n",
-                app_config::powerSourceName(powerSource_));
+  if (powerSource_ != previousSource) {
+    pendingPowerSource_ = powerSource_;
+    pendingPowerSourceSave_ = true;
+    schedulePendingControlSave();
+    Serial.printf("[power] queued source=%s\n",
+                  app_config::powerSourceName(powerSource_));
+  }
 
   if (!wasBattery && powerSource_ == app_config::PowerSource::Battery) {
     batteryMonitor_.begin();

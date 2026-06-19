@@ -4,4 +4,3 @@
 
 app_config::SnapclientDspConfig loadSnapclientDspConfig();
 void saveSnapclientDspConfig(const app_config::SnapclientDspConfig &config);
-void resetSnapclientDspConfig();

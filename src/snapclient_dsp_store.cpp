@@ -73,14 +73,3 @@ void saveSnapclientDspConfig(const app_config::SnapclientDspConfig &config) {
   prefs.putBytes(kPrefsBlobKey, &stored, sizeof(stored));
   prefs.end();
 }
-
-void resetSnapclientDspConfig() {
-  Preferences prefs;
-  if (!prefs.begin(kPrefsNamespace, false)) {
-    Serial.println("[dsp] failed to reset DSP preferences");
-    return;
-  }
-
-  prefs.remove(kPrefsBlobKey);
-  prefs.end();
-}

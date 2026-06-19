@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [2.1.5] - 2026-06-19
+
+- Reduced Snapclient control lag by caching the Bluetooth name for `/api/status`, skipping no-op settings persistence, and debouncing channel/power/name NVS writes so chatty companion apps do not flash-write during playback.
+- Avoided taking the Snapclient DSP mutex on every PCM write when DSP is disabled, keeping the default Snapserver audio path lighter while controls are being polled.
+- Cached generated Snapclient DSP JSON so frequent `/api/status` and `/api/dsp` polling does not rebuild the full EQ profile payload every time.
+- Reduced active-DSP audio write locking from two mutex passes to one and kept `POST /api/dsp/reset` on the debounced persistence path.
+- Updated visible firmware version fields and release documentation for `2.1.5`.
+
 ## [2.1.4] - 2026-06-19
 
 - Debounced persisted DSP preference writes so rapid preset/toggle/slider updates no longer synchronously write ESP32 NVS on every HTTP request while Snapclient audio is playing.

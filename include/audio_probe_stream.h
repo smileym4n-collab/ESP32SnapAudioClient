@@ -26,9 +26,11 @@ class AudioProbeStream : public audio_tools::AudioStream {
     nextDsp.configure(config);
     nextDsp.setAudioInfo(info.sample_rate, info.bits_per_sample, info.channels);
     nextDsp.setVolume(currentSnapVolume());
+    const bool nextDspEnabled = config.enabled;
 
     lockDsp();
     dsp_ = nextDsp;
+    dspEnabled_ = nextDspEnabled;
     unlockDsp();
   }
   void setVolumeProvider(VolumeProvider provider, void *context) {
@@ -125,12 +127,9 @@ class AudioProbeStream : public audio_tools::AudioStream {
     const app_config::ChannelMode channelMode =
         controller_ != nullptr ? controller_->channelMode()
                                : app_config::ChannelMode::Stereo;
-    bool dspSamples = false;
-    if (tryLockDsp()) {
-      dsp_.setVolume(currentSnapVolume());
-      dspSamples = dsp_.canProcess() && len >= sizeof(int16_t) * 2;
-      unlockDsp();
-    }
+    const bool dspEligible = dspEnabled_ && info.bits_per_sample == 16 &&
+                             info.channels == 2 &&
+                             len >= sizeof(int16_t) * 2;
     const bool routeChannels =
         channelMode != app_config::ChannelMode::Stereo &&
         info.bits_per_sample == 16 && info.channels == 2 &&
@@ -141,19 +140,30 @@ class AudioProbeStream : public audio_tools::AudioStream {
 
     const uint8_t *writeData = data;
     size_t writeLen = len;
-    if (routeChannels || scaleSamples || dspSamples) {
+    bool processBufferActive = routeChannels || scaleSamples;
+    if (processBufferActive) {
       processBuffer_.resize(len);
       if (routeChannels) {
         app_config::routeStereo16(channelMode, data, len, processBuffer_.data());
       } else {
         memcpy(processBuffer_.data(), data, len);
       }
-      if (dspSamples) {
-        if (tryLockDsp()) {
-          dsp_.processStereo16(processBuffer_.data(), processBuffer_.size());
-          unlockDsp();
+    }
+
+    if (dspEligible && tryLockDsp()) {
+      dsp_.setVolume(currentSnapVolume());
+      if (dsp_.canProcess()) {
+        if (!processBufferActive) {
+          processBuffer_.resize(len);
+          memcpy(processBuffer_.data(), data, len);
+          processBufferActive = true;
         }
+        dsp_.processStereo16(processBuffer_.data(), processBuffer_.size());
       }
+      unlockDsp();
+    }
+
+    if (processBufferActive) {
       if (scaleSamples) {
         applyScalar(processBuffer_.data(), processBuffer_.size(), gain);
       }
@@ -185,6 +195,7 @@ class AudioProbeStream : public audio_tools::AudioStream {
   bool periodicStatsEnabled_ = true;
   uint8_t firstWriteLogsRemaining_ = 3;
   bool fadeActive_ = false;
+  volatile bool dspEnabled_ = false;
   uint32_t fadeStartMs_ = 0;
   uint32_t fadeDurationMs_ = 1;
 

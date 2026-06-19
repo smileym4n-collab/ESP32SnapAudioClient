@@ -67,7 +67,9 @@ class SnapclientMode : public RuntimeMode {
   void applyDspConfig(const app_config::SnapclientDspConfig &config,
                       bool persist);
   void flushPendingDspSave(bool force);
-  String dspConfigJson() const;
+  void schedulePendingControlSave();
+  void flushPendingControlSaves(bool force);
+  String dspConfigJson();
 
   WiFiClient wifiClient_;
   AudioOutputController audioOutput_;
@@ -91,7 +93,12 @@ class SnapclientMode : public RuntimeMode {
   String otaError_;
   String otaMessage_;
   app_config::SnapclientDspConfig currentDspConfig_;
+  String dspConfigJsonCache_;
   app_config::PowerSource powerSource_ = app_config::PowerSource::Battery;
+  app_config::ChannelMode pendingChannelMode_ = app_config::ChannelMode::Stereo;
+  app_config::PowerSource pendingPowerSource_ = app_config::PowerSource::Battery;
+  String bluetoothName_;
+  String pendingBluetoothName_;
   bool snapclientStarted_ = false;
   bool wifiStartupFailed_ = false;
   bool restartPrepared_ = false;
@@ -100,6 +107,11 @@ class SnapclientMode : public RuntimeMode {
   bool otaUpdateFailed_ = false;
   bool otaRebootPending_ = false;
   bool pendingDspSave_ = false;
+  bool pendingChannelModeSave_ = false;
+  bool pendingPowerSourceSave_ = false;
+  bool pendingBluetoothNameSave_ = false;
+  bool dspConfigJsonDirty_ = true;
   uint32_t dspSaveDueMs_ = 0;
+  uint32_t controlSaveDueMs_ = 0;
   uint32_t lastWifiStartupRetryMs_ = 0;
 };

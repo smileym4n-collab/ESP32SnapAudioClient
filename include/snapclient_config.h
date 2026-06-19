@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.1.4
+  Version: 2.1.5
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -12,11 +12,11 @@
 #include "snapclient_dsp.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.1.4"
+#define APP_FIRMWARE_VERSION "2.1.5"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.1.4"
+#define APP_FIRMWARE_VERSION_TAG "v2.1.5"
 #endif
 
 #if __has_include("secrets.h")
@@ -181,6 +181,10 @@ static const SnapclientDspConfig SNAPCLIENT_DSP_CONFIG = {
 // Debounce persisted DSP writes so slider/preset changes do not synchronously
 // write NVS on every HTTP request while audio is playing.
 static constexpr uint32_t SNAPCLIENT_DSP_SAVE_DEBOUNCE_MS = 1500;
+// Debounce persisted control writes for channel routing, power source, and
+// Bluetooth naming so chatty companion apps do not flash-write while playback
+// is trying to keep the Snapserver stream fed.
+static constexpr uint32_t SNAPCLIENT_CONTROL_SAVE_DEBOUNCE_MS = 1500;
 // Re-enable the Snapclient resampler, but only allow very small drift
 // corrections so the queue can stay centered without audible pitch wobble.
 static constexpr bool SNAPCLIENT_USE_RESAMPLER = true;

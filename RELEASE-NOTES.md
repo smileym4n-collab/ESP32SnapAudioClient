@@ -1,4 +1,4 @@
-# Release Notes - ESP32 Audio Client v2.1.4
+# Release Notes - ESP32 Audio Client v2.1.5
 
 Release date: 2026-06-19
 
@@ -9,18 +9,22 @@ Target hardware:
 - External I2S DAC
 - Opus Snapserver stream
 
-## [2.1.4]
+## [2.1.5]
 
-- Persisted DSP preference writes are now debounced so rapid preset/toggle/slider changes no longer synchronously write ESP32 NVS on every HTTP request while audio is playing.
-- Live DSP reconfiguration now prepares filter state before taking the audio DSP mutex, then swaps the prepared state under a short lock.
-- Pending DSP settings are flushed before restart so the latest settings survive mode switches, OTA reboots, and recovery restarts.
+- `/api/status` now uses the in-memory Bluetooth name instead of opening ESP32 preferences/NVS on every poll.
+- Channel routing, power-source, and Bluetooth-name persistence is debounced so chatty companion apps do not flash-write while Snapserver playback is running.
+- No-op settings posts are ignored before persistence, reducing repeated work from sliders or segmented controls that resend the active value.
+- Generated DSP JSON is cached between DSP changes so status and DSP polling does not rebuild the full EQ profile payload every time.
+- The default DSP-disabled Snapserver audio path no longer takes the DSP mutex on every PCM write.
+- Active-DSP PCM writes now use one mutex pass instead of two, and DSP reset uses debounced persistence.
 
 ## Summary
 
-This patch release targets hangs and audio dropouts while toggling DSP or
-changing EQ. Live changes still apply immediately, but flash persistence is
-delayed until updates settle, avoiding repeated NVS writes on the playback path.
-DSP filter setup is also moved outside the short audio-state lock.
+This patch release targets Snapserver-only lag, API stalls, and playback drops
+seen while companion apps poll status or rapidly change volume-adjacent
+settings. Live changes still apply immediately, but avoidable flash writes,
+preference reads, JSON rebuilds, and DSP locks have been moved out of the
+hot path.
 
 Bluetooth output remains unchanged and does not use the Snapclient DSP path.
 
@@ -43,14 +47,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `2.1.3`
-- New version: `2.1.4`
+- Previous version: `2.1.4`
+- New version: `2.1.5`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `2.1.4`
-- `firmwareVersion`: `2.1.4`
+- `version`: `2.1.5`
+- `firmwareVersion`: `2.1.5`
 
 ## Build Notes
 
@@ -63,12 +67,12 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2037760` bytes (well within the OTA slot limit)
+- Built firmware image: `2038672` bytes (well within the OTA slot limit)
 
 ## Manual Test Checklist
 
-- Flash `2.1.4` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 2.1.4` and `GET /api/status` reports `firmwareVersion` as `2.1.4`.
+- Flash `2.1.5` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 2.1.5` and `GET /api/status` reports `firmwareVersion` as `2.1.5`.
 - Confirm `GET /api/status` includes `dsp`, `capabilities.snapclient_dsp: true`, and `capabilities.snapclient_dsp_update: true`.
 - Confirm `GET /api/dsp` returns the same DSP object shape as `/api/status` with `enabled: false`, Flat profile, loudness disabled, and soft limiter disabled after OTA/reset.
 - Confirm default Snapclient playback sounds like the pre-DSP baseline with no bass lift or limiter pumping.
