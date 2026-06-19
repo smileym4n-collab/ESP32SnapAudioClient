@@ -498,6 +498,7 @@ void SnapclientMode::loop() {
     batteryMonitor_.update();
   }
   handleControlApi();
+  flushPendingDspSave(false);
 
   if (otaRebootPending_ &&
       static_cast<int32_t>(millis() - otaRestartAtMs_) >= 0) {
@@ -577,6 +578,7 @@ void SnapclientMode::prepareForRestart() {
   }
 
   restartPrepared_ = true;
+  flushPendingDspSave(true);
   logDiagnosticSnapshot("prepare-restart");
   stopSnapClientTask(app_config::SNAPCLIENT_TASK_STOP_TIMEOUT_MS);
   snapProcessor_->end();
@@ -1003,8 +1005,22 @@ void SnapclientMode::applyDspConfig(
       currentDspConfig_, app_config::SNAPCLIENT_DSP_CONFIG);
   pcmProbe_.setDspConfig(currentDspConfig_);
   if (persist) {
-    saveSnapclientDspConfig(currentDspConfig_);
+    pendingDspSave_ = true;
+    dspSaveDueMs_ = millis() + app_config::SNAPCLIENT_DSP_SAVE_DEBOUNCE_MS;
   }
+}
+
+void SnapclientMode::flushPendingDspSave(bool force) {
+  if (!pendingDspSave_) {
+    return;
+  }
+
+  if (!force && static_cast<int32_t>(millis() - dspSaveDueMs_) < 0) {
+    return;
+  }
+
+  pendingDspSave_ = false;
+  saveSnapclientDspConfig(currentDspConfig_);
 }
 
 void SnapclientMode::handleGetDsp() {

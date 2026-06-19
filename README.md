@@ -9,7 +9,7 @@ receiver:
 It boots into Snapcast mode and you flip to Bluetooth (and back) with a single
 button press. Both modes share the same I2S DAC output path.
 
-Version: **2.1.3**
+Version: **2.1.4**
 
 ## Features
 

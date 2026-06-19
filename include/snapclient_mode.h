@@ -66,6 +66,7 @@ class SnapclientMode : public RuntimeMode {
   void snapClientTaskLoop();
   void applyDspConfig(const app_config::SnapclientDspConfig &config,
                       bool persist);
+  void flushPendingDspSave(bool force);
   String dspConfigJson() const;
 
   WiFiClient wifiClient_;
@@ -98,5 +99,7 @@ class SnapclientMode : public RuntimeMode {
   bool otaUpdateAccepted_ = false;
   bool otaUpdateFailed_ = false;
   bool otaRebootPending_ = false;
+  bool pendingDspSave_ = false;
+  uint32_t dspSaveDueMs_ = 0;
   uint32_t lastWifiStartupRetryMs_ = 0;
 };

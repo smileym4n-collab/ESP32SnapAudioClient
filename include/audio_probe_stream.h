@@ -22,8 +22,13 @@ class AudioProbeStream : public audio_tools::AudioStream {
   void setPcmGain(float gain) { pcmGain_ = gain; }
   void setPeriodicStatsEnabled(bool enabled) { periodicStatsEnabled_ = enabled; }
   void setDspConfig(const app_config::SnapclientDspConfig &config) {
+    app_config::SnapclientDsp nextDsp;
+    nextDsp.configure(config);
+    nextDsp.setAudioInfo(info.sample_rate, info.bits_per_sample, info.channels);
+    nextDsp.setVolume(currentSnapVolume());
+
     lockDsp();
-    dsp_.configure(config);
+    dsp_ = nextDsp;
     unlockDsp();
   }
   void setVolumeProvider(VolumeProvider provider, void *context) {

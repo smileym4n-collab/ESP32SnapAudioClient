@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-06-19
+
+- Debounced persisted DSP preference writes so rapid preset/toggle/slider updates no longer synchronously write ESP32 NVS on every HTTP request while Snapclient audio is playing.
+- Reworked live DSP reconfiguration so filter setup happens before taking the audio DSP mutex, then swaps the prepared DSP state under a short lock.
+- Flush pending DSP preference saves before restart so the latest settings are not lost during mode switches, OTA reboots, or recovery restarts.
+- Updated visible firmware version fields and release documentation for `2.1.4`.
+
 ## [2.1.3] - 2026-06-19
 
 - Changed the default Snapclient DSP configuration to a true bypass: DSP disabled, Flat preset, no loudness bass boost, no soft limiter, no gain, and no headroom trim unless a companion app explicitly enables processing.
