@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v2.1.5
+# Release Notes - ESP32 Audio Client v2.1.6
 
-Release date: 2026-06-19
+Release date: 2026-06-20
 
 Target hardware:
 
@@ -9,22 +9,18 @@ Target hardware:
 - External I2S DAC
 - Opus Snapserver stream
 
-## [2.1.5]
+## [2.1.6]
 
-- `/api/status` now uses the in-memory Bluetooth name instead of opening ESP32 preferences/NVS on every poll.
-- Channel routing, power-source, and Bluetooth-name persistence is debounced so chatty companion apps do not flash-write while Snapserver playback is running.
-- No-op settings posts are ignored before persistence, reducing repeated work from sliders or segmented controls that resend the active value.
-- Generated DSP JSON is cached between DSP changes so status and DSP polling does not rebuild the full EQ profile payload every time.
-- The default DSP-disabled Snapserver audio path no longer takes the DSP mutex on every PCM write.
-- Active-DSP PCM writes now use one mutex pass instead of two, and DSP reset uses debounced persistence.
+- Local control API responses now send `Connection: close`, preventing browser refreshes from leaving extra keep-alive sockets around while Snapclient playback is active.
+- `/api/status` and `/api/dsp` preallocate their JSON buffers, and status reuses cached DSP JSON by reference, reducing heap churn during web-app reloads and polling.
+- The firmware yields immediately after sending local control API responses so Snapclient and Wi-Fi tasks get scheduler time after browser requests.
 
 ## Summary
 
-This patch release targets Snapserver-only lag, API stalls, and playback drops
-seen while companion apps poll status or rapidly change volume-adjacent
-settings. Live changes still apply immediately, but avoidable flash writes,
-preference reads, JSON rebuilds, and DSP locks have been moved out of the
-hot path.
+This patch release targets audio dropouts and local control API stalls seen
+when refreshing or reopening the companion web app during Snapserver playback.
+The API response shape stays the same, but browser connections are shorter lived
+and response construction puts less pressure on the ESP32 heap and scheduler.
 
 Bluetooth output remains unchanged and does not use the Snapclient DSP path.
 
@@ -47,14 +43,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `2.1.4`
-- New version: `2.1.5`
+- Previous version: `2.1.5`
+- New version: `2.1.6`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `2.1.5`
-- `firmwareVersion`: `2.1.5`
+- `version`: `2.1.6`
+- `firmwareVersion`: `2.1.6`
 
 ## Build Notes
 
@@ -71,14 +67,14 @@ The build uses PlatformIO's `default_16MB.csv` partition table, which provides t
 
 ## Manual Test Checklist
 
-- Flash `2.1.5` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 2.1.5` and `GET /api/status` reports `firmwareVersion` as `2.1.5`.
+- Flash `2.1.6` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 2.1.6` and `GET /api/status` reports `firmwareVersion` as `2.1.6`.
 - Confirm `GET /api/status` includes `dsp`, `capabilities.snapclient_dsp: true`, and `capabilities.snapclient_dsp_update: true`.
 - Confirm `GET /api/dsp` returns the same DSP object shape as `/api/status` with `enabled: false`, Flat profile, loudness disabled, and soft limiter disabled after OTA/reset.
 - Confirm default Snapclient playback sounds like the pre-DSP baseline with no bass lift or limiter pumping.
 - With Snapclient playback running, send a partial `POST /api/dsp` changing `eq_profile`, `bass_boost_db`, `balance`, and `loudness.enabled`; confirm audio continues while the response returns clamped updated values.
 - While playback is running, repeatedly toggle DSP and change EQ presets/sliders from the companion app; confirm audio does not hang and settings persist after the debounce window and reboot.
-- From the web app, change DSP and volume-adjacent controls and confirm the browser no longer reports a port `8080` response failure.
+- From the web app, refresh/reopen the app repeatedly while Snapserver playback is active and confirm audio continues and port `8080` responses recover normally.
 - Reboot and confirm the changed DSP settings persist.
 - Send `POST /api/dsp/reset` and confirm settings return to firmware defaults.
 - Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus` and a healthy `buffer` (e.g. `2000`).

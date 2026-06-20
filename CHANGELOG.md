@@ -4,6 +4,13 @@
 
 - Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
 
+## [2.1.6] - 2026-06-20
+
+- Added `Connection: close` to local control API responses so browser refreshes do not leave extra keep-alive sockets competing with Snapclient playback.
+- Preallocated `/api/status` and `/api/dsp` JSON buffers and returned the cached DSP JSON by reference to reduce heap churn during web-app reloads and polling.
+- Yielded immediately after local control API responses so the Snapclient and Wi-Fi tasks get scheduler time after browser requests.
+- Updated visible firmware version fields and release documentation for `2.1.6`.
+
 ## [2.1.5] - 2026-06-19
 
 - Reduced Snapclient control lag by caching the Bluetooth name for `/api/status`, skipping no-op settings persistence, and debouncing channel/power/name NVS writes so chatty companion apps do not flash-write during playback.

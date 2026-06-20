@@ -18,6 +18,8 @@
 namespace {
 
 constexpr uint8_t kEspImageHeaderMagic = 0xE9;
+constexpr unsigned int kStatusJsonReserveBytes = 4096;
+constexpr unsigned int kDspJsonReserveBytes = 3072;
 
 void writeWifiStatusLed(bool on) {
   const int level = on
@@ -880,24 +882,28 @@ void SnapclientMode::addControlApiCorsHeaders() {
   controlServer_.sendHeader("Access-Control-Allow-Headers",
                             "Content-Type,X-Firmware-Filename");
   controlServer_.sendHeader("Access-Control-Max-Age", "600");
+  controlServer_.sendHeader("Connection", "close");
 }
 
 void SnapclientMode::sendControlApiOptions() {
   addControlApiCorsHeaders();
   controlServer_.send(204);
+  delay(0);
 }
 
 void SnapclientMode::sendControlJson(int statusCode, const String &body) {
   addControlApiCorsHeaders();
   controlServer_.send(statusCode, "application/json", body);
+  delay(0);
 }
 
 void SnapclientMode::sendControlJson(int statusCode, const char *body) {
   addControlApiCorsHeaders();
   controlServer_.send(statusCode, "application/json", body);
+  delay(0);
 }
 
-String SnapclientMode::dspConfigJson() {
+const String &SnapclientMode::dspConfigJson() {
   if (!dspConfigJsonDirty_) {
     return dspConfigJsonCache_;
   }
@@ -905,6 +911,7 @@ String SnapclientMode::dspConfigJson() {
   const app_config::SnapclientEqPreset &preset =
       app_config::snapclientEqPreset(currentDspConfig_.eqPresetIndex);
   String response = "{";
+  response.reserve(kDspJsonReserveBytes);
   response += "\"enabled\":";
   response += currentDspConfig_.enabled ? "true" : "false";
   response += ",\"eq_profile\":\"";
@@ -984,6 +991,7 @@ void SnapclientMode::sendControlStatus() {
       app_config::OTA_FIRMWARE_UPDATE_ENABLED && partitionSize > 0;
 
   String response = "{";
+  response.reserve(kStatusJsonReserveBytes);
   response += "\"project\":\"";
   response += app_config::PROJECT_TITLE;
   response += "\",\"version\":\"";

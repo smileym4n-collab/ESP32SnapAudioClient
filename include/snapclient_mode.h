@@ -69,7 +69,7 @@ class SnapclientMode : public RuntimeMode {
   void flushPendingDspSave(bool force);
   void schedulePendingControlSave();
   void flushPendingControlSaves(bool force);
-  String dspConfigJson();
+  const String &dspConfigJson();
 
   WiFiClient wifiClient_;
   AudioOutputController audioOutput_;
