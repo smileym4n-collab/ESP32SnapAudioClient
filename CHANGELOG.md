@@ -4,6 +4,11 @@
 
 - Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
 
+## [2.2.1] - 2026-07-08
+
+- Pinned PlatformIO Git library dependencies to the revisions verified for the `2.2.x` firmware line so GitHub Actions builds no longer pull incompatible upstream `arduino-audio-tools` changes.
+- Updated visible firmware version fields and release documentation for `2.2.1`.
+
 ## [2.2.0] - 2026-07-08
 
 - Removed the Snapclient DSP/EQ engine, saved DSP preferences, and `/api/dsp` endpoints so the device keeps a lean PCM path focused on stable playback.

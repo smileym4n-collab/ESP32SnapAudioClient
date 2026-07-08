@@ -1,4 +1,4 @@
-# Release Notes - ESP32 Audio Client v2.2.0
+# Release Notes - ESP32 Audio Client v2.2.1
 
 Release date: 2026-07-08
 
@@ -9,8 +9,9 @@ Target hardware:
 - External I2S DAC
 - Opus Snapserver stream
 
-## [2.2.0]
+## [2.2.1]
 
+- Pinned PlatformIO Git dependencies to known-good revisions so clean GitHub Actions builds use the same library versions as local release builds.
 - Removed the Snapclient DSP/EQ engine and the `/api/dsp` control endpoints.
 - Simplified `/api/status` so it reports firmware identity, OTA, power source, channel mode, Bluetooth name, battery, and capabilities without a DSP object.
 - Advertised `capabilities.snapclient_dsp: false` and `capabilities.snapclient_dsp_update: false` for companion apps.
@@ -19,10 +20,11 @@ Target hardware:
 
 ## Summary
 
-This minor release removes the unused DSP/EQ layer and focuses the firmware on
-stable Snapclient playback with instant local controls. Channel routing still
-runs in the final PCM output probe, so mode changes take effect while audio is
-playing without restarting Snapclient or reconfiguring I2S.
+This patch release fixes clean GitHub Actions builds for the DSP-removal
+firmware line by pinning the PlatformIO Git dependencies to the library
+revisions verified with the firmware. The release otherwise keeps the `2.2.0`
+runtime behavior: DSP/EQ is removed and channel routing changes apply without
+restarting Snapclient or reconfiguring I2S.
 
 Bluetooth output remains unchanged.
 
@@ -45,14 +47,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `2.1.6`
-- New version: `2.2.0`
+- Previous version: `2.2.0`
+- New version: `2.2.1`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `2.2.0`
-- `firmwareVersion`: `2.2.0`
+- `version`: `2.2.1`
+- `firmwareVersion`: `2.2.1`
 
 ## Build Notes
 
@@ -69,8 +71,8 @@ The build uses PlatformIO's `default_16MB.csv` partition table, which provides t
 
 ## Manual Test Checklist
 
-- Flash `2.2.0` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 2.2.0` and `GET /api/status` reports `firmwareVersion` as `2.2.0`.
+- Flash `2.2.1` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 2.2.1` and `GET /api/status` reports `firmwareVersion` as `2.2.1`.
 - Confirm `GET /api/status` does not include a `dsp` object and reports `capabilities.snapclient_dsp: false` plus `capabilities.snapclient_dsp_update: false`.
 - Confirm `GET /api/dsp`, `POST /api/dsp`, and `POST /api/dsp/reset` are no longer available.
 - With Snapclient playback running, POST `stereo`, `left`, and `right` to `/api/channel-mode`; confirm the output switches immediately with no reboot and no audio dropout.
