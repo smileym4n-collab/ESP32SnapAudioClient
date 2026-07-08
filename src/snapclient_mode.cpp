@@ -1,8 +1,5 @@
 #include "snapclient_mode.h"
 
-#include <ctype.h>
-#include <math.h>
-
 #include <Update.h>
 #include <esp_ota_ops.h>
 #include <esp_heap_caps.h>
@@ -13,13 +10,11 @@
 #include "power_source_store.h"
 #include "project_snap_processor_rtos.h"
 #include "snapclient_config.h"
-#include "snapclient_dsp_store.h"
 
 namespace {
 
 constexpr uint8_t kEspImageHeaderMagic = 0xE9;
-constexpr unsigned int kStatusJsonReserveBytes = 4096;
-constexpr unsigned int kDspJsonReserveBytes = 3072;
+constexpr unsigned int kStatusJsonReserveBytes = 2048;
 
 void writeWifiStatusLed(bool on) {
   const int level = on
@@ -99,240 +94,6 @@ bool extractPowerSource(const String &body, app_config::PowerSource &source) {
   return app_config::parsePowerSource(value, source);
 }
 
-bool extractJsonObjectValue(const String &body, const char *key, String &value) {
-  String quotedKey = "\"";
-  quotedKey += key;
-  quotedKey += "\"";
-
-  const int keyIndex = body.indexOf(quotedKey);
-  if (keyIndex < 0) {
-    return false;
-  }
-
-  const int colonIndex = body.indexOf(':', keyIndex);
-  if (colonIndex < 0) {
-    return false;
-  }
-
-  const int objectStart = body.indexOf('{', colonIndex + 1);
-  if (objectStart < 0) {
-    return false;
-  }
-
-  int depth = 0;
-  for (int i = objectStart; i < body.length(); ++i) {
-    const char ch = body.charAt(i);
-    if (ch == '{') {
-      ++depth;
-    } else if (ch == '}') {
-      --depth;
-      if (depth == 0) {
-        value = body.substring(objectStart, i + 1);
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-bool extractJsonFloatValue(const String &body, const char *key, float &value) {
-  String quotedKey = "\"";
-  quotedKey += key;
-  quotedKey += "\"";
-
-  const int keyIndex = body.indexOf(quotedKey);
-  if (keyIndex < 0) {
-    return false;
-  }
-
-  const int colonIndex = body.indexOf(':', keyIndex);
-  if (colonIndex < 0) {
-    return false;
-  }
-
-  int valueStart = colonIndex + 1;
-  while (valueStart < body.length() && isspace(body.charAt(valueStart))) {
-    ++valueStart;
-  }
-
-  int valueEnd = valueStart;
-  while (valueEnd < body.length()) {
-    const char ch = body.charAt(valueEnd);
-    if (ch == ',' || ch == '}') {
-      break;
-    }
-    ++valueEnd;
-  }
-
-  String rawValue = body.substring(valueStart, valueEnd);
-  rawValue.trim();
-  if (rawValue.length() == 0) {
-    return false;
-  }
-
-  value = rawValue.toFloat();
-  return true;
-}
-
-bool extractJsonBoolValue(const String &body, const char *key, bool &value) {
-  String quotedKey = "\"";
-  quotedKey += key;
-  quotedKey += "\"";
-
-  const int keyIndex = body.indexOf(quotedKey);
-  if (keyIndex < 0) {
-    return false;
-  }
-
-  const int colonIndex = body.indexOf(':', keyIndex);
-  if (colonIndex < 0) {
-    return false;
-  }
-
-  int valueStart = colonIndex + 1;
-  while (valueStart < body.length() && isspace(body.charAt(valueStart))) {
-    ++valueStart;
-  }
-
-  if (body.substring(valueStart, valueStart + 4) == "true") {
-    value = true;
-    return true;
-  }
-  if (body.substring(valueStart, valueStart + 5) == "false") {
-    value = false;
-    return true;
-  }
-
-  return false;
-}
-
-bool findTopLevelJsonKey(const String &body, const char *key, int &colonIndex) {
-  String quotedKey = "\"";
-  quotedKey += key;
-  quotedKey += "\"";
-
-  int depth = 0;
-  for (int i = 0; i < body.length(); ++i) {
-    const char ch = body.charAt(i);
-    if (ch == '{') {
-      ++depth;
-    } else if (ch == '}') {
-      --depth;
-    } else if (depth == 1 && body.substring(i, i + quotedKey.length()) ==
-                                  quotedKey) {
-      colonIndex = body.indexOf(':', i + quotedKey.length());
-      return colonIndex >= 0;
-    }
-  }
-
-  return false;
-}
-
-bool extractTopLevelJsonFloatValue(const String &body,
-                                   const char *key,
-                                   float &value) {
-  int colonIndex = -1;
-  if (!findTopLevelJsonKey(body, key, colonIndex)) {
-    return false;
-  }
-
-  int valueStart = colonIndex + 1;
-  while (valueStart < body.length() && isspace(body.charAt(valueStart))) {
-    ++valueStart;
-  }
-
-  int valueEnd = valueStart;
-  while (valueEnd < body.length()) {
-    const char ch = body.charAt(valueEnd);
-    if (ch == ',' || ch == '}') {
-      break;
-    }
-    ++valueEnd;
-  }
-
-  String rawValue = body.substring(valueStart, valueEnd);
-  rawValue.trim();
-  if (rawValue.length() == 0) {
-    return false;
-  }
-
-  value = rawValue.toFloat();
-  return true;
-}
-
-bool extractTopLevelJsonBoolValue(const String &body,
-                                  const char *key,
-                                  bool &value) {
-  int colonIndex = -1;
-  if (!findTopLevelJsonKey(body, key, colonIndex)) {
-    return false;
-  }
-
-  int valueStart = colonIndex + 1;
-  while (valueStart < body.length() && isspace(body.charAt(valueStart))) {
-    ++valueStart;
-  }
-
-  if (body.substring(valueStart, valueStart + 4) == "true") {
-    value = true;
-    return true;
-  }
-  if (body.substring(valueStart, valueStart + 5) == "false") {
-    value = false;
-    return true;
-  }
-
-  return false;
-}
-
-const char *eqFilterTypeName(app_config::SnapclientEqFilterType type) {
-  switch (type) {
-    case app_config::SnapclientEqFilterType::LowShelf:
-      return "low_shelf";
-    case app_config::SnapclientEqFilterType::Peaking:
-      return "peaking";
-    case app_config::SnapclientEqFilterType::HighShelf:
-      return "high_shelf";
-  }
-  return "unknown";
-}
-
-bool parseEqPresetName(const String &name, uint8_t &presetIndex) {
-  for (uint8_t i = 0; i < app_config::SNAPCLIENT_EQ_PRESET_COUNT; ++i) {
-    const app_config::SnapclientEqPreset &preset =
-        app_config::SNAPCLIENT_EQ_PRESETS[i];
-    if (name.equalsIgnoreCase(preset.name) ||
-        name.equalsIgnoreCase(preset.displayName)) {
-      presetIndex = i;
-      return true;
-    }
-  }
-  return false;
-}
-
-bool dspConfigsEqual(const app_config::SnapclientDspConfig &left,
-                     const app_config::SnapclientDspConfig &right) {
-  constexpr float kFloatTolerance = 0.001f;
-  return left.enabled == right.enabled &&
-         left.eqPresetIndex == right.eqPresetIndex &&
-         fabsf(left.bassBoostDb - right.bassBoostDb) <= kFloatTolerance &&
-         fabsf(left.leftGainDb - right.leftGainDb) <= kFloatTolerance &&
-         fabsf(left.rightGainDb - right.rightGainDb) <= kFloatTolerance &&
-         fabsf(left.balance - right.balance) <= kFloatTolerance &&
-         left.loudnessEnabled == right.loudnessEnabled &&
-         fabsf(left.loudnessBassMaxDb - right.loudnessBassMaxDb) <=
-             kFloatTolerance &&
-         fabsf(left.loudnessFullBoostVolume - right.loudnessFullBoostVolume) <=
-             kFloatTolerance &&
-         fabsf(left.loudnessFlatVolume - right.loudnessFlatVolume) <=
-             kFloatTolerance &&
-         fabsf(left.headroomDb - right.headroomDb) <= kFloatTolerance &&
-         left.softLimiterEnabled == right.softLimiterEnabled &&
-         fabsf(left.softLimiterCeiling - right.softLimiterCeiling) <=
-             kFloatTolerance;
-}
-
 }  // namespace
 
 SnapclientMode::SnapclientMode()
@@ -352,11 +113,8 @@ SnapclientMode::SnapclientMode()
                        app_config::SNAPCLIENT_SYNC_INTERVAL,
                        app_config::SNAPCLIENT_MIN_PLAYBACK_FACTOR,
                        app_config::SNAPCLIENT_MAX_PLAYBACK_FACTOR,
-                       app_config::SNAPCLIENT_UNITY_DEADBAND),
-      currentDspConfig_(app_config::SNAPCLIENT_DSP_CONFIG) {
+                       app_config::SNAPCLIENT_UNITY_DEADBAND) {
   pcmProbe_.setPcmGain(app_config::SNAPCLIENT_FINAL_PCM_GAIN);
-  pcmProbe_.setDspConfig(currentDspConfig_);
-  pcmProbe_.setVolumeProvider(snapOutputVolume, &snapOutput_);
   pcmProbe_.setChannelController(&audioOutput_);
   pcmProbe_.setPeriodicStatsEnabled(app_config::SNAPCLIENT_PERIODIC_STATS_ENABLED);
   snapProcessor_->setPeriodicStatsEnabled(
@@ -409,10 +167,8 @@ bool SnapclientMode::startSnapclientServices() {
     return false;
   }
   audioOutput_.setChannelMode(loadChannelModePreference());
-  pendingChannelMode_ = audioOutput_.channelMode();
   Serial.printf("[channel] snapclient channel mode=%s\n",
                 app_config::channelModeName(audioOutput_.channelMode()));
-  applyDspConfig(loadSnapclientDspConfig(), false);
   powerSource_ = loadPowerSourcePreference();
   pendingPowerSource_ = powerSource_;
   bluetoothName_ = loadBluetoothNamePreference();
@@ -466,25 +222,6 @@ bool SnapclientMode::startSnapclientServices() {
                 app_config::SNAPCLIENT_OUTPUT_GAIN);
   Serial.printf("[snapclient] final pcm gain=%.2f\n",
                 app_config::SNAPCLIENT_FINAL_PCM_GAIN);
-  const app_config::SnapclientEqPreset &activePreset =
-      app_config::snapclientEqPreset(currentDspConfig_.eqPresetIndex);
-  Serial.printf("[snapclient] dsp=%s profile=%s preamp=%.1fdB bass_boost=%.1fdB\n",
-                currentDspConfig_.enabled ? "on" : "off",
-                activePreset.name,
-                activePreset.preampDb,
-                currentDspConfig_.bassBoostDb);
-  Serial.printf("[snapclient] dsp gains left=%.1fdB right=%.1fdB balance=%.2f headroom=%.1fdB limiter=%s ceiling=%.2f\n",
-                currentDspConfig_.leftGainDb,
-                currentDspConfig_.rightGainDb,
-                currentDspConfig_.balance,
-                currentDspConfig_.headroomDb,
-                currentDspConfig_.softLimiterEnabled ? "on" : "off",
-                currentDspConfig_.softLimiterCeiling);
-  Serial.printf("[snapclient] loudness=%s bass=%.1fdB volume=%.2f..%.2f\n",
-                currentDspConfig_.loudnessEnabled ? "on" : "off",
-                currentDspConfig_.loudnessBassMaxDb,
-                currentDspConfig_.loudnessFullBoostVolume,
-                currentDspConfig_.loudnessFlatVolume);
   Serial.printf("[snapclient] sync=dynamic-clamped range=%.4f..%.4f deadband=%.4f lag=%dms interval=%d\n",
                 app_config::SNAPCLIENT_MIN_PLAYBACK_FACTOR,
                 app_config::SNAPCLIENT_MAX_PLAYBACK_FACTOR,
@@ -527,7 +264,6 @@ void SnapclientMode::loop() {
     batteryMonitor_.update();
   }
   handleControlApi();
-  flushPendingDspSave(false);
   flushPendingControlSaves(false);
 
   if (otaRebootPending_ &&
@@ -608,7 +344,6 @@ void SnapclientMode::prepareForRestart() {
   }
 
   restartPrepared_ = true;
-  flushPendingDspSave(true);
   flushPendingControlSaves(true);
   logDiagnosticSnapshot("prepare-restart");
   stopSnapClientTask(app_config::SNAPCLIENT_TASK_STOP_TIMEOUT_MS);
@@ -718,11 +453,6 @@ void SnapclientMode::snapClientTaskEntry(void *context) {
     self->snapClientTaskLoop();
   }
   vTaskDelete(nullptr);
-}
-
-float SnapclientMode::snapOutputVolume(void *context) {
-  auto *output = static_cast<ProjectSnapOutput *>(context);
-  return output != nullptr ? output->volume() : 1.0f;
 }
 
 void SnapclientMode::snapClientTaskLoop() {
@@ -847,11 +577,6 @@ void SnapclientMode::beginControlApi() {
   controlServer_.on("/api/bluetooth-name", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on("/api/power-source", HTTP_POST, [this]() { handleSetPowerSource(); });
   controlServer_.on("/api/power-source", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
-  controlServer_.on("/api/dsp", HTTP_GET, [this]() { handleGetDsp(); });
-  controlServer_.on("/api/dsp", HTTP_POST, [this]() { handleSetDsp(); });
-  controlServer_.on("/api/dsp", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
-  controlServer_.on("/api/dsp/reset", HTTP_POST, [this]() { handleResetDsp(); });
-  controlServer_.on("/api/dsp/reset", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on("/api/firmware", HTTP_OPTIONS, [this]() { sendControlApiOptions(); });
   controlServer_.on(
       "/api/firmware",
@@ -903,82 +628,6 @@ void SnapclientMode::sendControlJson(int statusCode, const char *body) {
   delay(0);
 }
 
-const String &SnapclientMode::dspConfigJson() {
-  if (!dspConfigJsonDirty_) {
-    return dspConfigJsonCache_;
-  }
-
-  const app_config::SnapclientEqPreset &preset =
-      app_config::snapclientEqPreset(currentDspConfig_.eqPresetIndex);
-  String response = "{";
-  response.reserve(kDspJsonReserveBytes);
-  response += "\"enabled\":";
-  response += currentDspConfig_.enabled ? "true" : "false";
-  response += ",\"eq_profile\":\"";
-  response += preset.name;
-  response += "\",\"eq_profile_display\":\"";
-  response += preset.displayName;
-  response += "\",\"eq_profiles\":[";
-  for (uint8_t i = 0; i < app_config::SNAPCLIENT_EQ_PRESET_COUNT; ++i) {
-    if (i > 0) {
-      response += ",";
-    }
-    const app_config::SnapclientEqPreset &availablePreset =
-        app_config::SNAPCLIENT_EQ_PRESETS[i];
-    response += "{\"name\":\"";
-    response += availablePreset.name;
-    response += "\",\"display_name\":\"";
-    response += availablePreset.displayName;
-    response += "\"}";
-  }
-  response += "],\"eq\":{\"preamp_db\":";
-  response += String(preset.preampDb, 1);
-  response += ",\"bands\":[";
-  for (uint8_t i = 0; i < app_config::SNAPCLIENT_EQ_BAND_COUNT; ++i) {
-    if (i > 0) {
-      response += ",";
-    }
-    const app_config::SnapclientEqBand &band = preset.bands[i];
-    response += "{\"type\":\"";
-    response += eqFilterTypeName(band.type);
-    response += "\",\"frequency_hz\":";
-    response += String(band.frequencyHz, 1);
-    response += ",\"gain_db\":";
-    response += String(band.gainDb, 1);
-    response += ",\"q\":";
-    response += String(band.q, 3);
-    response += ",\"enabled\":";
-    response += band.enabled ? "true" : "false";
-    response += "}";
-  }
-  response += "]},\"bass_boost_db\":";
-  response += String(currentDspConfig_.bassBoostDb, 1);
-  response += ",\"left_gain_db\":";
-  response += String(currentDspConfig_.leftGainDb, 1);
-  response += ",\"right_gain_db\":";
-  response += String(currentDspConfig_.rightGainDb, 1);
-  response += ",\"balance\":";
-  response += String(currentDspConfig_.balance, 2);
-  response += ",\"loudness\":{\"enabled\":";
-  response += currentDspConfig_.loudnessEnabled ? "true" : "false";
-  response += ",\"bass_max_db\":";
-  response += String(currentDspConfig_.loudnessBassMaxDb, 1);
-  response += ",\"full_boost_volume\":";
-  response += String(currentDspConfig_.loudnessFullBoostVolume, 2);
-  response += ",\"flat_volume\":";
-  response += String(currentDspConfig_.loudnessFlatVolume, 2);
-  response += "},\"headroom_db\":";
-  response += String(currentDspConfig_.headroomDb, 1);
-  response += ",\"soft_limiter\":{\"enabled\":";
-  response += currentDspConfig_.softLimiterEnabled ? "true" : "false";
-  response += ",\"ceiling\":";
-  response += String(currentDspConfig_.softLimiterCeiling, 2);
-  response += "}}";
-  dspConfigJsonCache_ = response;
-  dspConfigJsonDirty_ = false;
-  return dspConfigJsonCache_;
-}
-
 void SnapclientMode::sendControlStatus() {
   if (powerSource_ == app_config::PowerSource::Battery) {
     batteryMonitor_.update();
@@ -1014,9 +663,7 @@ void SnapclientMode::sendControlStatus() {
   response += "\"";
   response += ",\"channel_mode\":\"";
   response += app_config::channelModeName(audioOutput_.channelMode());
-  response += "\",\"dsp\":";
-  response += dspConfigJson();
-  response += ",\"bluetooth_name\":\"";
+  response += "\",\"bluetooth_name\":\"";
   response += bluetoothName_;
   response += "\",\"battery\":{";
   response += "\"available\":";
@@ -1028,43 +675,12 @@ void SnapclientMode::sendControlStatus() {
     response += battery.percent;
   }
   response += "}";
-  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"power_source\":true,\"snapclient_dsp\":true,\"snapclient_dsp_update\":true,\"firmware_update\":";
+  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"power_source\":true,\"snapclient_dsp\":false,\"snapclient_dsp_update\":false,\"firmware_update\":";
   response += otaSupported ? "true" : "false";
   response += "}";
   response += "}";
 
   sendControlJson(200, response);
-}
-
-void SnapclientMode::sendDspStatus() {
-  sendControlJson(200, dspConfigJson());
-}
-
-void SnapclientMode::applyDspConfig(
-    const app_config::SnapclientDspConfig &config,
-    bool persist) {
-  currentDspConfig_ = config;
-  app_config::sanitizeSnapclientDspConfig(
-      currentDspConfig_, app_config::SNAPCLIENT_DSP_CONFIG);
-  dspConfigJsonDirty_ = true;
-  pcmProbe_.setDspConfig(currentDspConfig_);
-  if (persist) {
-    pendingDspSave_ = true;
-    dspSaveDueMs_ = millis() + app_config::SNAPCLIENT_DSP_SAVE_DEBOUNCE_MS;
-  }
-}
-
-void SnapclientMode::flushPendingDspSave(bool force) {
-  if (!pendingDspSave_) {
-    return;
-  }
-
-  if (!force && static_cast<int32_t>(millis() - dspSaveDueMs_) < 0) {
-    return;
-  }
-
-  pendingDspSave_ = false;
-  saveSnapclientDspConfig(currentDspConfig_);
 }
 
 void SnapclientMode::schedulePendingControlSave() {
@@ -1073,18 +689,12 @@ void SnapclientMode::schedulePendingControlSave() {
 }
 
 void SnapclientMode::flushPendingControlSaves(bool force) {
-  if (!pendingChannelModeSave_ && !pendingPowerSourceSave_ &&
-      !pendingBluetoothNameSave_) {
+  if (!pendingPowerSourceSave_ && !pendingBluetoothNameSave_) {
     return;
   }
 
   if (!force && static_cast<int32_t>(millis() - controlSaveDueMs_) < 0) {
     return;
-  }
-
-  if (pendingChannelModeSave_) {
-    pendingChannelModeSave_ = false;
-    saveChannelModePreference(pendingChannelMode_);
   }
 
   if (pendingPowerSourceSave_) {
@@ -1096,124 +706,6 @@ void SnapclientMode::flushPendingControlSaves(bool force) {
     pendingBluetoothNameSave_ = false;
     saveBluetoothNamePreference(pendingBluetoothName_);
   }
-}
-
-void SnapclientMode::handleGetDsp() {
-  sendDspStatus();
-}
-
-void SnapclientMode::handleSetDsp() {
-  const String body = controlServer_.arg("plain");
-  if (body.length() == 0) {
-    sendControlJson(
-        400,
-        "{\"error\":\"invalid_dsp_config\",\"message\":\"Request body is required\"}");
-    return;
-  }
-
-  app_config::SnapclientDspConfig nextConfig = currentDspConfig_;
-  bool boolValue = false;
-  float floatValue = 0.0f;
-  uint8_t presetIndex = nextConfig.eqPresetIndex;
-  String stringValue;
-  String section;
-
-  if (extractTopLevelJsonBoolValue(body, "enabled", boolValue)) {
-    nextConfig.enabled = boolValue;
-  }
-
-  if (extractJsonStringValue(body, "eq_profile", stringValue) ||
-      extractJsonStringValue(body, "profile", stringValue) ||
-      extractJsonStringValue(body, "preset", stringValue)) {
-    if (!parseEqPresetName(stringValue, presetIndex)) {
-      sendControlJson(
-          400,
-          "{\"error\":\"invalid_eq_profile\",\"message\":\"Unknown EQ profile\"}");
-      return;
-    }
-    nextConfig.eqPresetIndex = presetIndex;
-  }
-
-  if (extractJsonObjectValue(body, "eq", section)) {
-    if (extractJsonStringValue(section, "profile", stringValue) ||
-        extractJsonStringValue(section, "preset", stringValue)) {
-      if (!parseEqPresetName(stringValue, presetIndex)) {
-        sendControlJson(
-            400,
-            "{\"error\":\"invalid_eq_profile\",\"message\":\"Unknown EQ profile\"}");
-        return;
-      }
-      nextConfig.eqPresetIndex = presetIndex;
-    }
-  }
-
-  if (extractTopLevelJsonFloatValue(body, "bass_boost_db", floatValue)) {
-    nextConfig.bassBoostDb = floatValue;
-  }
-  if (extractTopLevelJsonFloatValue(body, "left_gain_db", floatValue)) {
-    nextConfig.leftGainDb = floatValue;
-  }
-  if (extractTopLevelJsonFloatValue(body, "right_gain_db", floatValue)) {
-    nextConfig.rightGainDb = floatValue;
-  }
-  if (extractTopLevelJsonFloatValue(body, "balance", floatValue)) {
-    nextConfig.balance = floatValue;
-  }
-  if (extractTopLevelJsonFloatValue(body, "headroom_db", floatValue)) {
-    nextConfig.headroomDb = floatValue;
-  }
-
-  if (extractJsonObjectValue(body, "loudness", section)) {
-    if (extractJsonBoolValue(section, "enabled", boolValue)) {
-      nextConfig.loudnessEnabled = boolValue;
-    }
-    if (extractJsonFloatValue(section, "bass_max_db", floatValue)) {
-      nextConfig.loudnessBassMaxDb = floatValue;
-    }
-  }
-
-  if (extractJsonObjectValue(body, "soft_limiter", section)) {
-    if (extractJsonBoolValue(section, "enabled", boolValue)) {
-      nextConfig.softLimiterEnabled = boolValue;
-    }
-    if (extractJsonFloatValue(section, "ceiling", floatValue)) {
-      nextConfig.softLimiterCeiling = floatValue;
-    }
-  }
-
-  app_config::sanitizeSnapclientDspConfig(
-      nextConfig, app_config::SNAPCLIENT_DSP_CONFIG);
-  if (dspConfigsEqual(nextConfig, currentDspConfig_)) {
-    sendDspStatus();
-    return;
-  }
-
-  applyDspConfig(nextConfig, true);
-  const app_config::SnapclientEqPreset &activePreset =
-      app_config::snapclientEqPreset(currentDspConfig_.eqPresetIndex);
-  Serial.printf("[dsp] updated enabled=%s profile=%s bass=%.1fdB balance=%.2f loudness=%s/%.1fdB headroom=%.1fdB limiter=%s/%.2f\n",
-                currentDspConfig_.enabled ? "true" : "false",
-                activePreset.name,
-                currentDspConfig_.bassBoostDb,
-                currentDspConfig_.balance,
-                currentDspConfig_.loudnessEnabled ? "true" : "false",
-                currentDspConfig_.loudnessBassMaxDb,
-                currentDspConfig_.headroomDb,
-                currentDspConfig_.softLimiterEnabled ? "true" : "false",
-                currentDspConfig_.softLimiterCeiling);
-  sendDspStatus();
-}
-
-void SnapclientMode::handleResetDsp() {
-  app_config::SnapclientDspConfig defaultConfig =
-      app_config::SNAPCLIENT_DSP_CONFIG;
-  app_config::sanitizeSnapclientDspConfig(
-      defaultConfig, app_config::SNAPCLIENT_DSP_CONFIG);
-  if (!dspConfigsEqual(defaultConfig, currentDspConfig_)) {
-    applyDspConfig(defaultConfig, true);
-  }
-  Serial.println("[dsp] reset to firmware defaults");
-  sendDspStatus();
 }
 
 void SnapclientMode::handleSetChannelMode() {
@@ -1230,9 +722,7 @@ void SnapclientMode::handleSetChannelMode() {
   const app_config::ChannelMode currentMode = audioOutput_.channelMode();
   audioOutput_.setChannelMode(requestedMode);
   if (requestedMode != currentMode) {
-    pendingChannelMode_ = requestedMode;
-    pendingChannelModeSave_ = true;
-    schedulePendingControlSave();
+    saveChannelModePreference(requestedMode);
   }
   sendControlStatus();
 }

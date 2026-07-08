@@ -2,21 +2,20 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.1.6
+  Version: 2.2.0
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
 #include <Arduino.h>
 
 #include "power_source.h"
-#include "snapclient_dsp.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.1.6"
+#define APP_FIRMWARE_VERSION "2.2.0"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.1.6"
+#define APP_FIRMWARE_VERSION_TAG "v2.2.0"
 #endif
 
 #if __has_include("secrets.h")
@@ -158,29 +157,6 @@ static constexpr float SNAPCLIENT_OUTPUT_GAIN = 0.85f;
 // Final safety trim applied to the actual Snapclient PCM samples immediately
 // before they are handed to I2S. This does not affect Bluetooth mode.
 static constexpr float SNAPCLIENT_FINAL_PCM_GAIN = 1.00f;
-// Snapclient-only DSP stage applied after Opus decode and channel routing, just
-// before the shared I2S output. Bluetooth mode is intentionally unchanged.
-// Defaults are a true bypass: no EQ, loudness, limiter, gain, or PCM copy unless
-// the user explicitly enables processing through the control API.
-// Balance is -1.0..1.0 (negative = quieter right, positive = quieter left).
-static const SnapclientDspConfig SNAPCLIENT_DSP_CONFIG = {
-    false,    // enabled
-    0,        // EQ preset index (Flat)
-    0.0f,     // layered bass boost, dB
-    0.0f,     // left gain, dB
-    0.0f,     // right gain, dB
-    0.0f,     // balance
-    false,    // loudness bass boost enabled
-    3.0f,     // loudness max bass boost, dB
-    0.30f,    // full loudness boost at or below this Snapserver volume
-    0.80f,    // loudness boost fades to flat at or above this volume
-    0.0f,     // output headroom trim, dB
-    false,    // soft limiter enabled
-    0.98f     // soft limiter ceiling, 0.0..1.0 of PCM full scale
-};
-// Debounce persisted DSP writes so slider/preset changes do not synchronously
-// write NVS on every HTTP request while audio is playing.
-static constexpr uint32_t SNAPCLIENT_DSP_SAVE_DEBOUNCE_MS = 1500;
 // Debounce persisted control writes for channel routing, power source, and
 // Bluetooth naming so chatty companion apps do not flash-write while playback
 // is trying to keep the Snapserver stream fed.

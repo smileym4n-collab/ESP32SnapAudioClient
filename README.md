@@ -9,7 +9,7 @@ receiver:
 It boots into Snapcast mode and you flip to Bluetooth (and back) with a single
 button press. Both modes share the same I2S DAC output path.
 
-Version: **2.1.6**
+Version: **2.2.0**
 
 ## Features
 
@@ -18,8 +18,6 @@ Version: **2.1.6**
   ESP32 Wi-Fi, decoded to 48 kHz PCM on-device.
 - **Channel routing** — play `stereo`, or fold `left`/`right` to both DAC channels
   (great for using one board as a mono left or right speaker in a stereo pair).
-- **Snapclient EQ/DSP** — adjustable preset EQ, layered bass boost, balance,
-  volume-aware loudness bass lift, headroom trim, and a soft limiter.
 - **Companion-app HTTP API** — a small local API on port `8080` for controls
   Snapserver doesn't expose (channel routing, power source, Bluetooth name, OTA).
 - **OTA firmware updates** — push a new build over the local network; audio fades
@@ -88,15 +86,6 @@ Snapserver, decodes the Opus stream to 48 kHz PCM, and plays it through the I2S
 DAC. A deep compressed buffer absorbs Wi-Fi jitter, and the local control API
 comes up on port `8080`.
 
-The Snapclient PCM path can also apply a lightweight DSP stage before I2S:
-5-band preset EQ, layered bass boost, balance, volume-aware loudness bass boost,
-optional headroom trim, and a final soft limiter. Bluetooth mode does not use
-this DSP path. Firmware defaults are a true bypass; enable DSP from the local API
-only when you want EQ, loudness, limiting, gain, or balance processing. Tune
-defaults in `SNAPCLIENT_DSP_CONFIG` and the firmware preset table in
-[snapclient_config.h](include/snapclient_config.h), or adjust the saved
-profile-style settings live through the local control API.
-
 Expected Snapserver stream: `codec=opus`, `sampleformat=44100:16:2`. See
 [docs/snapserver.md](docs/snapserver.md) for a worked example and the recommended
 `buffer` setting.
@@ -130,18 +119,15 @@ Bluetooth, `s` for Snapclient, `t` to toggle, or `?` for help.
 Snapclient mode exposes a local HTTP API on port `8080`:
 
 - `GET /api/status` — firmware identity, mode, power source, channel mode,
-  Snapclient DSP settings, battery, and capabilities.
+  battery, and capabilities.
 - `POST /api/channel-mode` — `{"channel_mode":"stereo"|"left"|"right"}`.
 - `POST /api/power-source` — `{"power_source":"battery"|"mains"}`.
-- `GET /api/dsp` / `POST /api/dsp` — read or update saved Snapclient DSP
-  profile, bass boost, loudness, and balance settings.
-- `POST /api/dsp/reset` — restore firmware-default DSP settings.
 - `POST /api/bluetooth-name` — `{"bluetooth_name":"CoolCube Kitchen"}`.
 - `POST /api/firmware` — raw `.bin` app image for OTA update.
 
-Channel mode, power source, and DSP settings are saved in flash and restored on
-later boots. The Bluetooth name is saved and applied the next time the device
-boots into Bluetooth mode.
+Channel mode and power source are saved in flash and restored on later boots.
+The Bluetooth name is saved and applied the next time the device boots into
+Bluetooth mode.
 
 See [API.md](API.md) for the compact reference and
 [docs/control-api.md](docs/control-api.md) for full request/response examples.
@@ -164,7 +150,7 @@ tuning constants are in [snapclient_config.h](include/snapclient_config.h).
 | --- | --- |
 | [include/secrets.example.h](include/secrets.example.h) | Template for your local `include/secrets.h` Wi-Fi credentials |
 | [include/board_config.h](include/board_config.h) | Hardware pin assignments and LED/battery options |
-| [include/snapclient_config.h](include/snapclient_config.h) | Snapserver address, audio format, DSP, buffering and runtime tuning |
+| [include/snapclient_config.h](include/snapclient_config.h) | Snapserver address, audio format, buffering and runtime tuning |
 
 ## Documentation
 
@@ -178,7 +164,5 @@ tuning constants are in [snapclient_config.h](include/snapclient_config.h).
 
 - Mode changes happen by software reboot; only one audio mode is active per boot.
 - Bluetooth mode does not talk to Snapserver and ignores channel routing.
-- Raw DSP band editing is not exposed through the API; companion apps select
-  firmware EQ profiles and adjust bass boost, loudness, and balance.
 - Snapclient mode depends on Wi-Fi; keep the ESP32 on strong 2.4 GHz signal and,
   where possible, the Snapserver on wired Ethernet.

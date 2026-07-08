@@ -72,8 +72,8 @@ Recommended response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "2.1.6",
-  "firmwareVersion": "2.1.6",
+  "version": "2.2.0",
+  "firmwareVersion": "2.2.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
@@ -86,8 +86,8 @@ Recommended response:
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
     "power_source": true,
-    "snapclient_dsp": true,
-    "snapclient_dsp_update": true,
+    "snapclient_dsp": false,
+    "snapclient_dsp_update": false,
     "firmware_update": true
   }
 }

@@ -1,6 +1,6 @@
-# Release Notes - ESP32 Audio Client v2.1.6
+# Release Notes - ESP32 Audio Client v2.2.0
 
-Release date: 2026-06-20
+Release date: 2026-07-08
 
 Target hardware:
 
@@ -9,20 +9,22 @@ Target hardware:
 - External I2S DAC
 - Opus Snapserver stream
 
-## [2.1.6]
+## [2.2.0]
 
-- Local control API responses now send `Connection: close`, preventing browser refreshes from leaving extra keep-alive sockets around while Snapclient playback is active.
-- `/api/status` and `/api/dsp` preallocate their JSON buffers, and status reuses cached DSP JSON by reference, reducing heap churn during web-app reloads and polling.
-- The firmware yields immediately after sending local control API responses so Snapclient and Wi-Fi tasks get scheduler time after browser requests.
+- Removed the Snapclient DSP/EQ engine and the `/api/dsp` control endpoints.
+- Simplified `/api/status` so it reports firmware identity, OTA, power source, channel mode, Bluetooth name, battery, and capabilities without a DSP object.
+- Advertised `capabilities.snapclient_dsp: false` and `capabilities.snapclient_dsp_update: false` for companion apps.
+- Made channel mode apply immediately and persist during `POST /api/channel-mode`, so `stereo`, `left`, and `right` survive reboot.
+- Kept OTA firmware upload behavior unchanged.
 
 ## Summary
 
-This patch release targets audio dropouts and local control API stalls seen
-when refreshing or reopening the companion web app during Snapserver playback.
-The API response shape stays the same, but browser connections are shorter lived
-and response construction puts less pressure on the ESP32 heap and scheduler.
+This minor release removes the unused DSP/EQ layer and focuses the firmware on
+stable Snapclient playback with instant local controls. Channel routing still
+runs in the final PCM output probe, so mode changes take effect while audio is
+playing without restarting Snapclient or reconfiguring I2S.
 
-Bluetooth output remains unchanged and does not use the Snapclient DSP path.
+Bluetooth output remains unchanged.
 
 ## Snapserver Profile
 
@@ -43,14 +45,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `2.1.5`
-- New version: `2.1.6`
+- Previous version: `2.1.6`
+- New version: `2.2.0`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `2.1.6`
-- `firmwareVersion`: `2.1.6`
+- `version`: `2.2.0`
+- `firmwareVersion`: `2.2.0`
 
 ## Build Notes
 
@@ -63,22 +65,18 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2038672` bytes (well within the OTA slot limit)
+- Built firmware image: `2018544` bytes
 
 ## Manual Test Checklist
 
-- Flash `2.1.6` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 2.1.6` and `GET /api/status` reports `firmwareVersion` as `2.1.6`.
-- Confirm `GET /api/status` includes `dsp`, `capabilities.snapclient_dsp: true`, and `capabilities.snapclient_dsp_update: true`.
-- Confirm `GET /api/dsp` returns the same DSP object shape as `/api/status` with `enabled: false`, Flat profile, loudness disabled, and soft limiter disabled after OTA/reset.
-- Confirm default Snapclient playback sounds like the pre-DSP baseline with no bass lift or limiter pumping.
-- With Snapclient playback running, send a partial `POST /api/dsp` changing `eq_profile`, `bass_boost_db`, `balance`, and `loudness.enabled`; confirm audio continues while the response returns clamped updated values.
-- While playback is running, repeatedly toggle DSP and change EQ presets/sliders from the companion app; confirm audio does not hang and settings persist after the debounce window and reboot.
-- From the web app, refresh/reopen the app repeatedly while Snapserver playback is active and confirm audio continues and port `8080` responses recover normally.
-- Reboot and confirm the changed DSP settings persist.
-- Send `POST /api/dsp/reset` and confirm settings return to firmware defaults.
-- Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus` and a healthy `buffer` (e.g. `2000`).
+- Flash `2.2.0` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 2.2.0` and `GET /api/status` reports `firmwareVersion` as `2.2.0`.
+- Confirm `GET /api/status` does not include a `dsp` object and reports `capabilities.snapclient_dsp: false` plus `capabilities.snapclient_dsp_update: false`.
+- Confirm `GET /api/dsp`, `POST /api/dsp`, and `POST /api/dsp/reset` are no longer available.
+- With Snapclient playback running, POST `stereo`, `left`, and `right` to `/api/channel-mode`; confirm the output switches immediately with no reboot and no audio dropout.
+- Reboot and confirm the selected channel mode persists.
+- From the companion web app, move volume and channel controls during playback and confirm the UI updates immediately while audio continues.
+- Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus` and a healthy `buffer` such as `2000`.
 - **OTA while playing:** start an OTA from the companion app with music playing and confirm the audio fades out cleanly, the update completes, and playback resumes on the new firmware after reboot.
-- **Channel routing:** with audio playing, POST `stereo` / `left` / `right` and confirm the output audibly switches with no reboot and survives a reboot.
-- Confirm Bluetooth mode still plays normally and is unchanged (stereo, no routing).
+- Confirm Bluetooth mode still plays normally and is unchanged.
 - Confirm playback through the I2S DAC works with no MCLK line connected.

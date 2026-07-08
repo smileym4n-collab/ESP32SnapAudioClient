@@ -4,6 +4,13 @@
 
 - Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
 
+## [2.2.0] - 2026-07-08
+
+- Removed the Snapclient DSP/EQ engine, saved DSP preferences, and `/api/dsp` endpoints so the device keeps a lean PCM path focused on stable playback.
+- Changed `/api/status` to omit the `dsp` object and advertise `capabilities.snapclient_dsp: false` and `capabilities.snapclient_dsp_update: false`.
+- Made `POST /api/channel-mode` apply immediately and persist the selected `stereo` / `left` / `right` mode in the same request so channel routing survives reboot.
+- Kept OTA firmware upload behavior unchanged while updating release documentation and visible firmware identity fields for `2.2.0`.
+
 ## [2.1.6] - 2026-06-20
 
 - Added `Connection: close` to local control API responses so browser refreshes do not leave extra keep-alive sockets competing with Snapclient playback.

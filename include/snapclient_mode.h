@@ -43,13 +43,9 @@ class SnapclientMode : public RuntimeMode {
   void sendControlJson(int statusCode, const String &body);
   void sendControlJson(int statusCode, const char *body);
   void sendControlStatus();
-  void sendDspStatus();
   void handleSetChannelMode();
   void handleSetBluetoothName();
   void handleSetPowerSource();
-  void handleGetDsp();
-  void handleSetDsp();
-  void handleResetDsp();
   void handleFirmwareUploadRaw();
   void handleFirmwareUploadComplete();
   void quiesceAudioForOta();
@@ -62,14 +58,9 @@ class SnapclientMode : public RuntimeMode {
   bool startSnapClientTask();
   void stopSnapClientTask(uint32_t timeoutMs);
   static void snapClientTaskEntry(void *context);
-  static float snapOutputVolume(void *context);
   void snapClientTaskLoop();
-  void applyDspConfig(const app_config::SnapclientDspConfig &config,
-                      bool persist);
-  void flushPendingDspSave(bool force);
   void schedulePendingControlSave();
   void flushPendingControlSaves(bool force);
-  const String &dspConfigJson();
 
   WiFiClient wifiClient_;
   AudioOutputController audioOutput_;
@@ -92,10 +83,7 @@ class SnapclientMode : public RuntimeMode {
   int otaResponseStatus_ = 500;
   String otaError_;
   String otaMessage_;
-  app_config::SnapclientDspConfig currentDspConfig_;
-  String dspConfigJsonCache_;
   app_config::PowerSource powerSource_ = app_config::PowerSource::Battery;
-  app_config::ChannelMode pendingChannelMode_ = app_config::ChannelMode::Stereo;
   app_config::PowerSource pendingPowerSource_ = app_config::PowerSource::Battery;
   String bluetoothName_;
   String pendingBluetoothName_;
@@ -106,12 +94,8 @@ class SnapclientMode : public RuntimeMode {
   bool otaUpdateAccepted_ = false;
   bool otaUpdateFailed_ = false;
   bool otaRebootPending_ = false;
-  bool pendingDspSave_ = false;
-  bool pendingChannelModeSave_ = false;
   bool pendingPowerSourceSave_ = false;
   bool pendingBluetoothNameSave_ = false;
-  bool dspConfigJsonDirty_ = true;
-  uint32_t dspSaveDueMs_ = 0;
   uint32_t controlSaveDueMs_ = 0;
   uint32_t lastWifiStartupRetryMs_ = 0;
 };
