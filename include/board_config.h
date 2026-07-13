@@ -5,11 +5,20 @@
 namespace board_config {
 
 // ---------- User-editable hardware pin assignments ----------
-static constexpr int I2S_BCLK_PIN = 26;   // I2S bit clock to external DAC BCLK/SCK
-static constexpr int I2S_LRCLK_PIN = 25;  // I2S word select / LRCLK to DAC WS
-static constexpr int I2S_DOUT_PIN = 13;   // I2S serial data output to DAC DIN
-// No MCLK line is used. PCM5102-style I2S DACs derive their internal clocks from
-// BCLK and do not need a separate master clock.
+// Zeppelin install: the original PCM1808 remains the I2S clock master.
+// Set these three pins before flashing the firmware into the speaker:
+//   PCM1808 BCK  -> ESP32 I2S_BCK_IN
+//   PCM1808 LRCK -> ESP32 I2S_LRCK_IN
+//   ESP32 DATA   -> Zeppelin DSP input through a 22-47 ohm series resistor
+// Leave MCLK/SCKI disconnected from the ESP32.
+static constexpr int I2S_BCK_IN = -1;
+static constexpr int I2S_LRCK_IN = -1;
+static constexpr int I2S_DATA_OUT = -1;
+
+// Backward-compatible names for existing code/docs.
+static constexpr int I2S_BCLK_PIN = I2S_BCK_IN;
+static constexpr int I2S_LRCLK_PIN = I2S_LRCK_IN;
+static constexpr int I2S_DOUT_PIN = I2S_DATA_OUT;
 
 // Runtime mode-toggle button. Default wiring is a simple momentary switch to GND.
 // Cold boot always starts in Snapclient mode.

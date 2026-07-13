@@ -68,29 +68,38 @@ bool AudioOutputController::begin(uint32_t sampleRate,
   gainRampStartMs_ = millis();
   gainRampDurationMs_ = 0;
 
-  fillConfig(config_,
-             sampleRate,
-             app_config::AUDIO_CHANNELS,
-             app_config::AUDIO_BITS_PER_SAMPLE,
-             dmaBufferCount,
-             dmaBufferSize);
+  sourceSampleRate_ = sampleRate;
+  sourceChannels_ = app_config::AUDIO_CHANNELS;
+  sourceBitsPerSample_ = app_config::AUDIO_BITS_PER_SAMPLE;
 
-  Serial.printf("[i2s] begin format=%lu Hz, %u-bit, %u ch\n",
+  const uint16_t sanitizedBufferSize = sanitizedDmaBufferSize(dmaBufferSize);
+
+  Serial.printf("[i2s] begin source=%lu Hz, %u-bit, %u ch\n",
                 static_cast<unsigned long>(sampleRate),
                 app_config::AUDIO_BITS_PER_SAMPLE,
                 app_config::AUDIO_CHANNELS);
-  Serial.printf("[i2s] bclk=%d ws=%d dout=%d\n",
-                board_config::I2S_BCLK_PIN,
-                board_config::I2S_LRCLK_PIN,
-                board_config::I2S_DOUT_PIN);
-  Serial.printf("[i2s] dma=%u x %u bytes, apll=%s\n",
+  Serial.printf("[i2s] external clock bck_in=%d lrck_in=%d data_out=%d\n",
+                board_config::I2S_BCK_IN,
+                board_config::I2S_LRCK_IN,
+                board_config::I2S_DATA_OUT);
+  Serial.printf("[i2s] wire=%lu Hz, Philips I2S, %u valid bits in %u-bit slots, slave TX\n",
+                static_cast<unsigned long>(app_config::I2S_EXTERNAL_SAMPLE_RATE),
+                app_config::I2S_VALID_BITS,
+                app_config::I2S_SLOT_BITS);
+  Serial.printf("[i2s] dma=%u x %u frames, apll=%s\n",
                 dmaBufferCount,
-                dmaBufferSize,
+                sanitizedBufferSize,
                 app_config::I2S_USE_AUDIO_PLL ? "on" : "off");
 
-  const bool started = i2sOut_.begin(config_);
+  const bool started = i2sOut_.begin(sampleRate,
+                                     app_config::AUDIO_CHANNELS,
+                                     app_config::AUDIO_BITS_PER_SAMPLE,
+                                     dmaBufferCount,
+                                     sanitizedBufferSize);
   if (started) {
     rampToFullScale(app_config::AUDIO_UNMUTE_RAMP_MS);
+  } else {
+    Serial.println("[i2s] slave-tx initialization failed; DATA held low when possible");
   }
   return started;
 }
@@ -111,10 +120,14 @@ void AudioOutputController::updateAudioFormat(uint32_t sampleRate,
     return;
   }
 
+  sourceSampleRate_ = sampleRate;
+  sourceChannels_ = channels;
+  sourceBitsPerSample_ = bitsPerSample;
+
   AudioInfo info(sampleRate, channels, bitsPerSample);
   i2sOut_.setAudioInfo(info);
 
-  Serial.printf("[i2s] format update=%lu Hz, %u-bit, %u ch\n",
+  Serial.printf("[i2s] source format update=%lu Hz, %u-bit, %u ch\n",
                 static_cast<unsigned long>(sampleRate),
                 bitsPerSample,
                 channels);
@@ -122,8 +135,8 @@ void AudioOutputController::updateAudioFormat(uint32_t sampleRate,
 
 size_t AudioOutputController::write(const uint8_t *data, size_t length) {
   if (channelMode_ == app_config::ChannelMode::Stereo ||
-      config_.channels != 2 ||
-      config_.bits_per_sample != 16) {
+      sourceChannels_ != 2 ||
+      sourceBitsPerSample_ != 16) {
     return writeRaw(data, length);
   }
 
@@ -169,14 +182,14 @@ size_t AudioOutputController::writeRaw(const uint8_t *data, size_t length) {
 
   const uint16_t gainQ15 = currentGainQ15();
   const size_t written =
-      (config_.bits_per_sample == 16 && gainQ15 < kFullScaleGainQ15)
+      (sourceBitsPerSample_ == 16 && gainQ15 < kFullScaleGainQ15)
           ? writeGainAdjusted(data, length, gainQ15)
           : i2sOut_.write(data, length);
 
   if (app_config::AUDIO_DEBUG_STATS_ENABLED) {
     windowBytes += static_cast<uint32_t>(written);
 
-    if (written > 0 && config_.bits_per_sample == 16) {
+    if (written > 0 && sourceBitsPerSample_ == 16) {
       const uint16_t chunkPeak = maxAbsPcm16(data, written);
       if (chunkPeak > windowPeak) {
         windowPeak = chunkPeak;
@@ -195,6 +208,10 @@ size_t AudioOutputController::writeRaw(const uint8_t *data, size_t length) {
   }
 
   return written;
+}
+
+bool AudioOutputController::externalClockMissingRecently(uint32_t timeoutMs) const {
+  return i2sOut_.externalClockMissingRecently(timeoutMs);
 }
 
 void AudioOutputController::rampToMute(uint32_t durationMs) {
@@ -287,24 +304,4 @@ size_t AudioOutputController::writeGainAdjusted(const uint8_t *data,
   }
 
   return totalWritten;
-}
-
-void AudioOutputController::fillConfig(I2SConfig &cfg,
-                                       uint32_t sampleRate,
-                                       uint8_t channels,
-                                       uint8_t bitsPerSample,
-                                       uint8_t dmaBufferCount,
-                                       uint16_t dmaBufferSize) {
-  cfg = i2sOut_.defaultConfig(TX_MODE);
-  cfg.sample_rate = sampleRate;
-  cfg.channels = channels;
-  cfg.bits_per_sample = bitsPerSample;
-  cfg.pin_bck = board_config::I2S_BCLK_PIN;
-  cfg.pin_ws = board_config::I2S_LRCLK_PIN;
-  cfg.pin_data = board_config::I2S_DOUT_PIN;
-  cfg.pin_mck = -1;  // no MCLK; PCM5102-style DACs derive their clocks from BCLK
-  cfg.buffer_count = dmaBufferCount;
-  cfg.buffer_size = sanitizedDmaBufferSize(dmaBufferSize);
-  cfg.use_apll = app_config::I2S_USE_AUDIO_PLL;
-  cfg.auto_clear = true;
 }

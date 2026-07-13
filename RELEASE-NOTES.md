@@ -1,32 +1,56 @@
-# Release Notes - ESP32 Audio Client v2.2.1
+# Release Notes - ESP32 Audio Client v2.3.0
 
-Release date: 2026-07-08
+Release date: 2026-07-13
 
 Target hardware:
 
 - ESP32-WROVER-IE-N16R8
 - 16 MB flash / 8 MB PSRAM
-- External I2S DAC
+- First-generation B&W Zeppelin I2S retrofit
+- PCM1808 left fitted and clocked from its external 12.288 MHz oscillator
 - Opus Snapserver stream
 
-## [2.2.1]
+## [2.3.0]
 
-- Pinned PlatformIO Git dependencies to known-good revisions so clean GitHub Actions builds use the same library versions as local release builds.
-- Removed the Snapclient DSP/EQ engine and the `/api/dsp` control endpoints.
-- Simplified `/api/status` so it reports firmware identity, OTA, power source, channel mode, Bluetooth name, battery, and capabilities without a DSP object.
-- Advertised `capabilities.snapclient_dsp: false` and `capabilities.snapclient_dsp_update: false` for companion apps.
-- Made channel mode apply immediately and persist during `POST /api/channel-mode`, so `stereo`, `left`, and `right` survive reboot.
-- Kept OTA firmware upload behavior unchanged.
+- Replaced the previous internally clocked I2S output with ESP32 TX-only slave
+  mode for the Zeppelin install.
+- Uses external PCM1808 BCK/LRCK as the authoritative I2S clock domain:
+  48 kHz LRCK, 3.072 MHz BCK, 64 BCK per stereo frame.
+- Drives only ESP32 DATA into the Zeppelin DSP input; MCLK/SCKI is not connected
+  to the ESP32.
+- Sends standard Philips I2S, stereo, MSB first, with 24 valid audio bits in
+  32-bit slots.
+- Expands the existing decoded signed 16-bit PCM path into signed 32-bit
+  containers for I2S output, with the sample shifted left 16 bits so the active
+  audio bits are MSB-aligned and the low eight bits of the 24-bit field are zero.
+- Added `I2S_BCK_IN`, `I2S_LRCK_IN`, and `I2S_DATA_OUT` board configuration
+  definitions for the Zeppelin wiring.
+- Added initialization, format, GPIO, DMA-event, and missing-external-clock
+  diagnostics without falling back to I2S master mode.
+- Prevented Snapclient output-stall recovery from rebooting the ESP32 while
+  I2S writes are blocked by missing external BCK/LRCK.
 
 ## Summary
 
-This patch release fixes clean GitHub Actions builds for the DSP-removal
-firmware line by pinning the PlatformIO Git dependencies to the library
-revisions verified with the firmware. The release otherwise keeps the `2.2.0`
-runtime behavior: DSP/EQ is removed and channel routing changes apply without
-restarting Snapclient or reconfiguring I2S.
+This minor release changes only the final hardware I2S endpoint needed for the
+Zeppelin retrofit. Snapcast protocol handling, Opus decode, buffering, channel
+routing, dynamic Snapcast resampling, Wi-Fi behavior, OTA, and the local control
+API remain intact.
 
-Bluetooth output remains unchanged.
+The external PCM1808 clock domain is authoritative. The ESP32 does not generate
+BCK, LRCK, or MCLK for the Zeppelin path.
+
+## Required GPIO Setup
+
+Before flashing into the Zeppelin, edit [board_config.h](include/board_config.h):
+
+- `I2S_BCK_IN`: PCM1808 BCK input to the ESP32
+- `I2S_LRCK_IN`: PCM1808 LRCK/WS input to the ESP32
+- `I2S_DATA_OUT`: ESP32 DATA output to the Zeppelin DSP input through a 22-47 ohm
+  series resistor
+
+The original PCM1808 DOUT signal must be physically disconnected from the
+Zeppelin DSP. Leave PCM1808 SCKI/MCLK disconnected from the ESP32.
 
 ## Snapserver Profile
 
@@ -47,14 +71,14 @@ sudo systemctl restart snapserver
 
 ## Firmware Version
 
-- Previous version: `2.2.0`
-- New version: `2.2.1`
+- Previous version: `2.2.1`
+- New version: `2.3.0`
 
 Visible firmware version fields:
 
 - `project`: `ESP32 Audio Client`
-- `version`: `2.2.1`
-- `firmwareVersion`: `2.2.1`
+- `version`: `2.3.0`
+- `firmwareVersion`: `2.3.0`
 
 ## Build Notes
 
@@ -67,18 +91,29 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `2018544` bytes
+- Built firmware image: `1998445` bytes
 
 ## Manual Test Checklist
 
-- Flash `2.2.1` by USB or OTA from an OTA-capable build.
-- Confirm the boot log reports `[version] 2.2.1` and `GET /api/status` reports `firmwareVersion` as `2.2.1`.
-- Confirm `GET /api/status` does not include a `dsp` object and reports `capabilities.snapclient_dsp: false` plus `capabilities.snapclient_dsp_update: false`.
-- Confirm `GET /api/dsp`, `POST /api/dsp`, and `POST /api/dsp/reset` are no longer available.
-- With Snapclient playback running, POST `stereo`, `left`, and `right` to `/api/channel-mode`; confirm the output switches immediately with no reboot and no audio dropout.
-- Reboot and confirm the selected channel mode persists.
-- From the companion web app, move volume and channel controls during playback and confirm the UI updates immediately while audio continues.
-- Confirm Snapserver is configured with `sampleformat=44100:16:2&codec=opus` and a healthy `buffer` such as `2000`.
-- **OTA while playing:** start an OTA from the companion app with music playing and confirm the audio fades out cleanly, the update completes, and playback resumes on the new firmware after reboot.
-- Confirm Bluetooth mode still plays normally and is unchanged.
-- Confirm playback through the I2S DAC works with no MCLK line connected.
+- Flash `2.3.0` by USB or OTA from an OTA-capable build.
+- Confirm the boot log reports `[version] 2.3.0` and `GET /api/status` reports
+  `firmwareVersion` as `2.3.0`.
+- Confirm the boot log reports I2S slave TX, 48 kHz Philips I2S, 24 valid bits
+  in 32-bit slots, and the configured `I2S_BCK_IN`, `I2S_LRCK_IN`, and
+  `I2S_DATA_OUT` pins.
+- With an oscilloscope or logic analyser, confirm external LRCK is approximately
+  48 kHz and external BCK is approximately 3.072 MHz before starting playback.
+- Confirm no ESP32-generated BCK/LRCK appears; the ESP32 should only drive DATA.
+- Confirm digital silence is framed as zero DATA during boot, underrun, and stream
+  interruption.
+- During Snapclient playback, confirm DATA is synchronous to the external
+  BCK/LRCK and uses standard Philips I2S timing with the MSB one BCK after LRCK
+  transition.
+- Temporarily stop the external clocks and confirm the firmware logs throttled
+  I2S write-stall diagnostics without repeatedly rebooting.
+- Restore the external clocks and confirm playback can recover when the stream
+  refills.
+- Confirm `stereo`, `left`, and `right` channel modes still apply immediately.
+- **OTA while playing:** start an OTA from the companion app with music playing
+  and confirm the audio fades out cleanly, the update completes, and playback
+  resumes on the new firmware after reboot.

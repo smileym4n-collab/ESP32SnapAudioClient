@@ -2,6 +2,7 @@
 
 #include "AudioTools.h"
 #include "channel_mode.h"
+#include "external_clock_i2s_tx_stream.h"
 
 class AudioOutputController {
  public:
@@ -14,24 +15,21 @@ class AudioOutputController {
   void rampToMute(uint32_t durationMs);
   void rampToFullScale(uint32_t durationMs);
   void muteForRestart(uint32_t durationMs);
+  bool externalClockMissingRecently(uint32_t timeoutMs) const;
 
-  audio_tools::I2SStream &stream() { return i2sOut_; }
+  audio_tools::AudioStream &stream() { return i2sOut_; }
 
  private:
-  void fillConfig(audio_tools::I2SConfig &cfg,
-                  uint32_t sampleRate,
-                  uint8_t channels,
-                  uint8_t bitsPerSample,
-                  uint8_t dmaBufferCount,
-                  uint16_t dmaBufferSize);
   size_t writeRaw(const uint8_t *data, size_t length);
   void beginGainRamp(uint16_t targetGainQ15, uint32_t durationMs);
   uint16_t currentGainQ15();
   size_t writeGainAdjusted(const uint8_t *data, size_t length, uint16_t gainQ15);
 
-  audio_tools::I2SStream i2sOut_;
-  audio_tools::I2SConfig config_;
+  ExternalClockI2STxStream i2sOut_;
   app_config::ChannelMode channelMode_ = app_config::ChannelMode::Stereo;
+  uint32_t sourceSampleRate_ = app_config::AUDIO_SAMPLE_RATE;
+  uint8_t sourceChannels_ = app_config::AUDIO_CHANNELS;
+  uint8_t sourceBitsPerSample_ = app_config::AUDIO_BITS_PER_SAMPLE;
   uint16_t gainStartQ15_ = 0;
   uint16_t gainCurrentQ15_ = 0;
   uint16_t gainTargetQ15_ = 32767;

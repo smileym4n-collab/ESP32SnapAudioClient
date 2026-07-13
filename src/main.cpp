@@ -1,12 +1,13 @@
 /*
   Project: ESP32 audio client (SnapApp channel control API)
-  Version: 2.2.1
+  Version: 2.3.0
   Framework: Arduino (PlatformIO)
 
-  Pin map (ESP32-WROVER-IE-N16R8 -> external I2S DAC):
-    GPIO26 -> I2S BCLK
-    GPIO25 -> I2S LRCLK / WS
-    GPIO13 -> I2S DOUT
+  Zeppelin I2S install:
+    PCM1808 BCK  -> ESP32 I2S_BCK_IN
+    PCM1808 LRCK -> ESP32 I2S_LRCK_IN
+    ESP32 I2S_DATA_OUT -> Zeppelin DSP input through 22-47 ohm series resistor
+    MCLK/SCKI is not connected to the ESP32
     GPIO34 -> SENSE / battery voltage divider input
     GPIO23 -> Runtime mode-toggle button (active low with internal pull-up)
     GPIO32 -> Wi-Fi/Snapclient status LED (active low, common-anode RGB)

@@ -4,6 +4,15 @@
 
 - Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
 
+## [2.3.0] - 2026-07-13
+
+- Reworked the final I2S output for first-generation B&W Zeppelin installation: the ESP32 now runs TX-only slave mode from external PCM1808 BCK/LRCK and only drives the replacement DATA signal.
+- Changed the I2S wire format to standard Philips I2S at 48 kHz stereo with 24 valid bits carried in 32-bit slots.
+- Added configurable `I2S_BCK_IN`, `I2S_LRCK_IN`, and `I2S_DATA_OUT` board definitions for the Zeppelin wiring.
+- Added I2S slave-TX diagnostics for initialization, GPIO selection, format selection, DMA events, and missing external clock write timeouts.
+- Suppressed Snapclient output-stall restarts while external I2S clocks are missing so temporary PCM1808 clock loss does not reboot-loop the ESP32.
+- Updated visible firmware version fields and release documentation for `2.3.0`.
+
 ## [2.2.1] - 2026-07-08
 
 - Pinned PlatformIO Git library dependencies to the revisions verified for the `2.2.x` firmware line so GitHub Actions builds no longer pull incompatible upstream `arduino-audio-tools` changes.

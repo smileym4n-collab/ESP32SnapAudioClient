@@ -1,15 +1,15 @@
 # ESP32 Audio Client
 
-Firmware that turns an **ESP32-WROVER** + external I2S DAC into a dual-mode audio
-receiver:
+Firmware that turns an **ESP32-WROVER** into a dual-mode audio receiver for a
+first-generation **B&W Zeppelin** I2S retrofit:
 
 - a **synchronized Snapcast speaker** (multi-room audio over Wi-Fi, Opus transport), or
 - a **standalone Bluetooth speaker** (A2DP sink).
 
 It boots into Snapcast mode and you flip to Bluetooth (and back) with a single
-button press. Both modes share the same I2S DAC output path.
+button press. Both modes share the same external-clock I2S DATA output path.
 
-Version: **2.2.1**
+Version: **2.3.0**
 
 ## Features
 
@@ -28,7 +28,8 @@ Version: **2.2.1**
 ## Target hardware
 
 - Module: **ESP32-WROVER-IE-N16R8** (16 MB flash / 8 MB PSRAM, external antenna)
-- Audio output: an **external I2S DAC** (e.g. a PCM5102-style module)
+- Audio output: **I2S DATA into the Zeppelin DSP**, clocked by the Zeppelin's
+  original PCM1808 ADC BCK/LRCK
 - The on-chip DAC is not used.
 
 PSRAM is required — it backs the larger audio buffers used for Wi-Fi jitter
@@ -40,16 +41,19 @@ All hardware assignments live in [board_config.h](include/board_config.h).
 
 | Function | GPIO | Notes |
 | --- | --- | --- |
-| I2S BCLK | `GPIO26` | External DAC bit clock |
-| I2S LRCLK / WS | `GPIO25` | External DAC word select |
-| I2S DOUT | `GPIO13` | External DAC serial data input |
+| I2S_BCK_IN | set in `board_config.h` | 3.072 MHz BCK from the Zeppelin PCM1808 |
+| I2S_LRCK_IN | set in `board_config.h` | 48 kHz LRCK/WS from the Zeppelin PCM1808 |
+| I2S_DATA_OUT | set in `board_config.h` | ESP32 DATA to Zeppelin DSP input through 22-47 ohm series resistor |
 | Battery SENSE | `GPIO34` | 4S battery divider ADC input (ADC1) |
 | Mode button | `GPIO23` | Momentary, active-low, internal pull-up |
 | Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status, active-low common-anode |
 | Bluetooth LED | `GPIO33` | Bluetooth status, active-low common-anode |
 | Low-battery LED | `GPIO14` | Red low-battery warning, active-low common-anode |
 
-No MCLK line is used — PCM5102-style DACs generate their own clocks from BCLK.
+No MCLK/SCKI line is connected to the ESP32. The PCM1808 remains fitted and
+powered, uses the external 12.288 MHz oscillator, and supplies the authoritative
+48 kHz I2S clock domain. The original PCM1808 DOUT line must be disconnected
+from the Zeppelin DSP before connecting ESP32 DATA.
 If your LEDs are wired as GPIO → resistor → LED → GND instead of common-anode,
 flip the matching `*_ACTIVE_HIGH` flag in `board_config.h`.
 
@@ -82,9 +86,10 @@ two OTA app slots.
 ### Snapclient mode (default)
 
 Cold boot always starts here. The device joins Wi-Fi as a station, connects to
-Snapserver, decodes the Opus stream to 48 kHz PCM, and plays it through the I2S
-DAC. A deep compressed buffer absorbs Wi-Fi jitter, and the local control API
-comes up on port `8080`.
+Snapserver, decodes the Opus stream to 48 kHz PCM, and writes the final samples
+as slave-TX Philips I2S DATA synchronous to the external PCM1808 BCK/LRCK. A
+deep compressed buffer absorbs Wi-Fi jitter, and the local control API comes up
+on port `8080`.
 
 Expected Snapserver stream: `codec=opus`, `sampleformat=44100:16:2`. See
 [docs/snapserver.md](docs/snapserver.md) for a worked example and the recommended
@@ -94,8 +99,9 @@ Expected Snapserver stream: `codec=opus`, `sampleformat=44100:16:2`. See
 
 Entered after a mode-button press and reboot. Wi-Fi is disabled and the device
 becomes a Bluetooth A2DP sink, advertising as `CoolCube` by default, writing
-received audio to the same I2S DAC. Bluetooth mode is a simple connect-and-play
-stereo receiver and does not use the control API or channel routing.
+received audio to the same external-clock I2S DATA output. Bluetooth mode is a
+simple connect-and-play stereo receiver and does not use the control API or
+channel routing.
 
 ### Switching modes
 

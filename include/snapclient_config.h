@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.2.1
+  Version: 2.3.0
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.2.1"
+#define APP_FIRMWARE_VERSION "2.3.0"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.2.1"
+#define APP_FIRMWARE_VERSION_TAG "v2.3.0"
 #endif
 
 #if __has_include("secrets.h")
@@ -121,8 +121,18 @@ static constexpr uint8_t AUDIO_BITS_PER_SAMPLE = 16;
 static constexpr uint8_t AUDIO_CHANNELS = 2;
 
 // ---------- I2S / DMA tuning ----------
-// These are intentionally generous for the WROVER hardware and external DAC use.
-// The goal here is stable playback rather than minimum latency.
+// Zeppelin output runs as I2S slave TX. The B&W PCM1808 supplies BCK/LRCK; the
+// ESP32 only drives DATA into the Zeppelin DSP input.
+static constexpr uint32_t I2S_EXTERNAL_SAMPLE_RATE = 48000;
+static constexpr uint8_t I2S_VALID_BITS = 24;
+static constexpr uint8_t I2S_SLOT_BITS = 32;
+static constexpr uint8_t I2S_OUTPUT_BYTES_PER_FRAME =
+    (I2S_SLOT_BITS / 8) * AUDIO_CHANNELS;
+static constexpr uint32_t I2S_WRITE_TIMEOUT_MS = 20;
+static constexpr uint8_t I2S_EVENT_QUEUE_LENGTH = 8;
+static constexpr uint32_t I2S_DIAGNOSTIC_LOG_INTERVAL_MS = 1000;
+// These are intentionally generous for the WROVER hardware and external-clock
+// output use. The goal here is stable playback rather than minimum latency.
 static constexpr uint8_t I2S_DMA_BUFFER_COUNT = 24;
 // Classic ESP32 I2S driver requires the DMA buffer size to stay within 8..1024.
 static constexpr uint16_t I2S_DMA_BUFFER_SIZE = 1024;
@@ -130,7 +140,7 @@ static constexpr uint16_t I2S_DMA_BUFFER_SIZE = 1024;
 // I2S DMA footprint smaller than the Snapclient Wi-Fi path.
 static constexpr uint8_t BLUETOOTH_I2S_DMA_BUFFER_COUNT = 8;
 static constexpr uint16_t BLUETOOTH_I2S_DMA_BUFFER_SIZE = 512;
-static constexpr bool I2S_USE_AUDIO_PLL = true;
+static constexpr bool I2S_USE_AUDIO_PLL = false;
 static constexpr uint32_t AUDIO_UNMUTE_RAMP_MS = 35;
 static constexpr uint32_t AUDIO_MODE_CHANGE_MUTE_RAMP_MS = 35;
 

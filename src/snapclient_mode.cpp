@@ -200,8 +200,8 @@ bool SnapclientMode::startSnapclientServices() {
       app_config::AUDIO_BITS_PER_SAMPLE,
       app_config::AUDIO_CHANNELS);
   Serial.println(
-      "[audio] path=Snapserver Opus -> OpusAudioDecoder -> shared I2S DAC");
-  Serial.printf("[i2s] initial format=%lu Hz, %u-bit, %u ch\n",
+      "[audio] path=Snapserver Opus -> OpusAudioDecoder -> external-clock I2S DATA");
+  Serial.printf("[i2s] initial source format=%lu Hz, %u-bit, %u ch\n",
                 static_cast<unsigned long>(app_config::AUDIO_SAMPLE_RATE),
                 app_config::AUDIO_BITS_PER_SAMPLE,
                 app_config::AUDIO_CHANNELS);
@@ -388,6 +388,14 @@ void SnapclientMode::recoverFromOutputStall() {
   if (!snapProcessor_->hasBufferedAudio() &&
       !snapProcessor_->inputActiveRecently(
           app_config::SNAPCLIENT_INPUT_RECENT_TIMEOUT_MS)) {
+    return;
+  }
+
+  if (audioOutput_.externalClockMissingRecently(
+          app_config::SNAPCLIENT_OUTPUT_STALL_TIMEOUT_MS)) {
+    Serial.println(
+        "[snapclient] output stalled while external I2S clocks are missing; keeping firmware running");
+    snapProcessor_->logRuntime("external-i2s-clock-wait", true);
     return;
   }
 
