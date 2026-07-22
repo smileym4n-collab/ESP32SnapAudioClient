@@ -72,8 +72,8 @@ Recommended response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "2.2.1",
-  "firmwareVersion": "2.2.1",
+  "version": "2.4.0",
+  "firmwareVersion": "2.4.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
@@ -82,10 +82,18 @@ Recommended response:
   "runtime_mode": "snapclient",
   "power_source": "battery",
   "channel_mode": "stereo",
+  "battery": {
+    "available": true,
+    "voltage": 16.42,
+    "percent": 95,
+    "current": 1.238,
+    "power": 20.32
+  },
   "capabilities": {
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
     "power_source": true,
+    "battery_telemetry": true,
     "snapclient_dsp": false,
     "snapclient_dsp_update": false,
     "firmware_update": true
@@ -98,6 +106,12 @@ battery UI:
 
 - `power_source: "battery"` means show battery state when `battery.available` is `true`
 - `power_source: "mains"` means hide battery UI even though the device firmware supports battery-capable hardware
+
+When `capabilities.battery_telemetry` is `true` and `battery.available` is
+`true`, companion apps may display `battery.voltage` in volts,
+`battery.percent` as `0..100`, signed `battery.current` in amperes, and
+`battery.power` in watts. The current is positive for normal load draw from the
+INA236 `IN+` side toward `IN-`.
 
 If OTA is not available, report `false` or omit the OTA fields. SnapControl will keep standard Snapcast controls available and hide the upload button.
 

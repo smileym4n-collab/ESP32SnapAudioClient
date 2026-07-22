@@ -673,9 +673,13 @@ void SnapclientMode::sendControlStatus() {
     response += String(battery.voltage, 2);
     response += ",\"percent\":";
     response += battery.percent;
+    response += ",\"current\":";
+    response += String(battery.current, 3);
+    response += ",\"power\":";
+    response += String(battery.power, 2);
   }
   response += "}";
-  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"power_source\":true,\"snapclient_dsp\":false,\"snapclient_dsp_update\":false,\"firmware_update\":";
+  response += ",\"capabilities\":{\"channel_modes\":[\"stereo\",\"left\",\"right\"],\"bluetooth_name\":true,\"power_source\":true,\"battery_telemetry\":true,\"snapclient_dsp\":false,\"snapclient_dsp_update\":false,\"firmware_update\":";
   response += otaSupported ? "true" : "false";
   response += "}";
   response += "}";

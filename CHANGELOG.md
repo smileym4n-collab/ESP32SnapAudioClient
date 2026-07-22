@@ -4,6 +4,13 @@
 
 - Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
 
+## [2.4.0] - 2026-07-22
+
+- Replaced the GPIO34 resistor-divider/ADC battery input with an INA236 power monitor on I2C (`SDA GPIO21`, `SCL GPIO19`) using a `20 mΩ` shunt.
+- Preserved the existing 4S pack voltage-to-percentage curve while adding signed current draw and power usage to the battery monitor.
+- Added `battery.current`, `battery.power`, and `capabilities.battery_telemetry` to `/api/status` for companion apps.
+- Updated hardware, API, OTA contract, and visible firmware identity documentation for `2.4.0`.
+
 ## [2.2.1] - 2026-07-08
 
 - Pinned PlatformIO Git library dependencies to the revisions verified for the `2.2.x` firmware line so GitHub Actions builds no longer pull incompatible upstream `arduino-audio-tools` changes.

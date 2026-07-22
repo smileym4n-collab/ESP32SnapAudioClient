@@ -2,7 +2,7 @@
 
 /*
   ESP32 audio client configuration.
-  Version: 2.2.1
+  Version: 2.4.0
   Edit values below for your local network, Snapserver, and Bluetooth naming.
 */
 
@@ -11,11 +11,11 @@
 #include "power_source.h"
 
 #ifndef APP_FIRMWARE_VERSION
-#define APP_FIRMWARE_VERSION "2.2.1"
+#define APP_FIRMWARE_VERSION "2.4.0"
 #endif
 
 #ifndef APP_FIRMWARE_VERSION_TAG
-#define APP_FIRMWARE_VERSION_TAG "v2.2.1"
+#define APP_FIRMWARE_VERSION_TAG "v2.4.0"
 #endif
 
 #if __has_include("secrets.h")
@@ -73,17 +73,15 @@ static constexpr uint32_t OTA_AUDIO_FADE_MS = 100;
 // reaches the DAC and the I2S DMA (~128 ms deep) drains cleanly first.
 static constexpr uint32_t OTA_AUDIO_QUIESCE_DELAY_MS = 220;
 
-// ---------- Battery monitor ----------
-// Hardware divider: battery positive -> R_TOP -> ADC pin -> R_BOTTOM -> GND.
-// A full 4S Li-ion pack at 16.8 V reads about 2.49 V with 270k/47k.
-static constexpr float BATTERY_R_TOP_OHMS = 270000.0f;
-static constexpr float BATTERY_R_BOTTOM_OHMS = 47000.0f;
-static constexpr uint8_t BATTERY_ADC_SAMPLES = 16;
+// ---------- INA236 battery monitor ----------
+// The address is detected across all INA236A/INA236B A0 combinations.
+// ADCRANGE=0 gives a +/-81.92 mV shunt range; with the 20 mOhm shunt this
+// covers approximately +/-4.096 A at 125 uA/LSB.
+static constexpr uint32_t BATTERY_I2C_FREQUENCY_HZ = 400000;
+static constexpr float BATTERY_SHUNT_RESISTANCE_OHMS = 0.020f;
+static constexpr float BATTERY_CURRENT_LSB_AMPS = 0.000125f;
 static constexpr uint32_t BATTERY_POLL_INTERVAL_MS = 5000;
-static constexpr float BATTERY_ADC_REF_VOLTAGE = 3.3f;
-static constexpr float BATTERY_ADC_FULL_SCALE_COUNTS = 4095.0f;
 static constexpr float BATTERY_PERCENT_SMOOTH_ALPHA = 0.20f;
-static constexpr uint32_t BATTERY_ADC_DEFAULT_VREF_MV = 1100;
 static constexpr PowerSource DEFAULT_POWER_SOURCE = PowerSource::Battery;
 static constexpr int BATTERY_LOW_WARNING_PERCENT = 20;
 

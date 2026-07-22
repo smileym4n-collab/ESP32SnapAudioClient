@@ -2,12 +2,11 @@
 
 #include <Arduino.h>
 
-#include <driver/adc.h>
-#include <esp_adc_cal.h>
-
 struct BatteryStatus {
   bool available = false;
   float voltage = 0.0f;
+  float current = 0.0f;
+  float power = 0.0f;
   int percent = 0;
 };
 
@@ -18,20 +17,18 @@ class BatteryMonitor {
   BatteryStatus status() const;
 
  private:
-  bool pinToAdc1Channel(int pin, adc1_channel_t &channel) const;
-  float readPinVoltage();
-  float pinToPackVoltage(float pinVoltage) const;
+  bool detectDevice();
+  bool writeRegister(uint8_t reg, uint16_t value);
+  bool readRegister(uint8_t reg, uint16_t &value) const;
   int percentFromVoltage(float packVoltage) const;
 
   bool enabled_ = false;
   bool initialized_ = false;
-  bool calibrated_ = false;
-  adc1_channel_t adcChannel_ = ADC1_CHANNEL_0;
-  esp_adc_cal_characteristics_t adcCharacteristics_{};
+  uint8_t i2cAddress_ = 0;
   uint32_t lastPollMs_ = 0;
-  uint32_t rawAdcAverage_ = 0;
-  float pinVoltage_ = 0.0f;
   float packVoltage_ = 0.0f;
+  float currentAmps_ = 0.0f;
+  float powerWatts_ = 0.0f;
   float filteredPercent_ = 0.0f;
   int percent_ = 0;
 };

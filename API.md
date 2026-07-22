@@ -17,8 +17,8 @@ Example response:
 ```json
 {
   "project": "ESP32 Audio Client",
-  "version": "2.2.1",
-  "firmwareVersion": "2.2.1",
+  "version": "2.4.0",
+  "firmwareVersion": "2.4.0",
   "board": "ESP32-WROVER-IE-N16R8",
   "flash_size_mb": 16,
   "ota_partition_size": 6553600,
@@ -31,12 +31,15 @@ Example response:
   "battery": {
     "available": true,
     "voltage": 16.42,
-    "percent": 95
+    "percent": 95,
+    "current": 1.238,
+    "power": 20.32
   },
   "capabilities": {
     "channel_modes": ["stereo", "left", "right"],
     "bluetooth_name": true,
     "power_source": true,
+    "battery_telemetry": true,
     "snapclient_dsp": false,
     "snapclient_dsp_update": false,
     "firmware_update": true
@@ -60,12 +63,15 @@ Fields:
 | `power_source` | string | Saved power source: `battery` or `mains` |
 | `channel_mode` | string | Current local output routing: `stereo`, `left`, or `right` |
 | `bluetooth_name` | string | Saved Bluetooth device name used on later Bluetooth-mode boots |
-| `battery.available` | boolean | `true` when battery sensing is enabled and a reading is available |
-| `battery.voltage` | number | Reconstructed 4S pack voltage in volts, not ADC divider voltage |
+| `battery.available` | boolean | `true` when the INA236 is detected and a reading is available |
+| `battery.voltage` | number | INA236 bus/4S pack voltage in volts |
 | `battery.percent` | number | Estimated 4S battery percentage, `0..100` |
+| `battery.current` | number | Signed INA236 current in amperes; positive for load draw from `IN+` to `IN-` |
+| `battery.power` | number | INA236 power usage in watts |
 | `capabilities.channel_modes` | string array | Channel modes accepted by `POST /api/channel-mode` |
 | `capabilities.bluetooth_name` | boolean | `true` when `POST /api/bluetooth-name` is available |
 | `capabilities.power_source` | boolean | `true` when `POST /api/power-source` is available |
+| `capabilities.battery_telemetry` | boolean | `true` when this firmware supports INA236 voltage/current/power telemetry |
 | `capabilities.snapclient_dsp` | boolean | `false`; firmware DSP/EQ controls are not available |
 | `capabilities.snapclient_dsp_update` | boolean | `false`; DSP/EQ updates are not supported |
 | `capabilities.firmware_update` | boolean | `true` when `POST /api/firmware` is available |
@@ -142,7 +148,7 @@ Allowed `power_source` values:
 
 | Value | Behavior |
 | --- | --- |
-| `battery` | Report battery voltage/percentage when the configured ADC sense input is available |
+| `battery` | Report INA236 pack voltage, percentage, current, and power when available |
 | `mains` | Suppress battery readings and report `battery.available: false` |
 
 Successful responses return the same shape as `GET /api/status`.

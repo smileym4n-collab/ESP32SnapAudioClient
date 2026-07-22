@@ -1,13 +1,14 @@
 /*
   Project: ESP32 audio client (SnapApp channel control API)
-  Version: 2.2.1
+  Version: 2.4.0
   Framework: Arduino (PlatformIO)
 
   Pin map (ESP32-WROVER-IE-N16R8 -> external I2S DAC):
     GPIO26 -> I2S BCLK
     GPIO25 -> I2S LRCLK / WS
     GPIO13 -> I2S DOUT
-    GPIO34 -> SENSE / battery voltage divider input
+    GPIO21 -> INA236 SDA
+    GPIO19 -> INA236 SCL
     GPIO23 -> Runtime mode-toggle button (active low with internal pull-up)
     GPIO32 -> Wi-Fi/Snapclient status LED (active low, common-anode RGB)
     GPIO33 -> Bluetooth status LED (active low, common-anode RGB)
@@ -83,9 +84,11 @@ void setup() {
                 app_config::BATTERY_LOW_WARNING_PERCENT);
   Serial.printf("[button] pin=%d, press while running to toggle mode and reboot\n",
                 board_config::BOOT_MODE_BUTTON_PIN);
-  Serial.printf("[battery] sense=%s pin=%d\n",
-                board_config::BATTERY_SENSE_ENABLED ? "enabled" : "disabled",
-                board_config::BATTERY_SENSE_PIN);
+  Serial.printf("[battery] INA236=%s sda=GPIO%d scl=GPIO%d shunt=%.3f ohm\n",
+                board_config::BATTERY_MONITOR_ENABLED ? "enabled" : "disabled",
+                board_config::BATTERY_I2C_SDA_PIN,
+                board_config::BATTERY_I2C_SCL_PIN,
+                app_config::BATTERY_SHUNT_RESISTANCE_OHMS);
   Serial.println("[serial] commands: 'b' -> Bluetooth, 's' -> Snapclient, 't' -> toggle");
   gModeLed.setMode(selectedMode);
   gModeSwitch.begin(selectedMode);

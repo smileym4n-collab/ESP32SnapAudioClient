@@ -9,7 +9,7 @@ receiver:
 It boots into Snapcast mode and you flip to Bluetooth (and back) with a single
 button press. Both modes share the same I2S DAC output path.
 
-Version: **2.2.1**
+Version: **2.4.0**
 
 ## Features
 
@@ -22,7 +22,7 @@ Version: **2.2.1**
   Snapserver doesn't expose (channel routing, power source, Bluetooth name, OTA).
 - **OTA firmware updates** — push a new build over the local network; audio fades
   out and the pipeline quiesces first so the update lands reliably.
-- **Battery monitoring** — optional 4S pack voltage and estimated percentage.
+- **Battery monitoring** — INA236 pack voltage, 4S percentage, current, and power.
 - **Status LEDs** — separate Wi-Fi, Bluetooth, and low-battery indicators.
 
 ## Target hardware
@@ -43,7 +43,8 @@ All hardware assignments live in [board_config.h](include/board_config.h).
 | I2S BCLK | `GPIO26` | External DAC bit clock |
 | I2S LRCLK / WS | `GPIO25` | External DAC word select |
 | I2S DOUT | `GPIO13` | External DAC serial data input |
-| Battery SENSE | `GPIO34` | 4S battery divider ADC input (ADC1) |
+| INA236 SDA | `GPIO21` | I2C battery telemetry data |
+| INA236 SCL | `GPIO19` | I2C battery telemetry clock |
 | Mode button | `GPIO23` | Momentary, active-low, internal pull-up |
 | Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status, active-low common-anode |
 | Bluetooth LED | `GPIO33` | Bluetooth status, active-low common-anode |
@@ -138,11 +139,17 @@ USB flash.
 
 ## Battery monitor
 
-The board can report a 4S lithium pack voltage and estimated percentage through
-`/api/status`. The default divider is battery+ → `270k` → ADC pin → `47k` → GND,
-which reads about `2.49 V` at the pin for a full `16.8 V` pack. Set the power
-source to `mains` (via the API) to hide battery UI in companion apps. Details and
-tuning constants are in [snapclient_config.h](include/snapclient_config.h).
+The board reads pack voltage, current draw, and power from an INA236 over I2C,
+then applies the existing 4S lithium voltage-to-percentage curve. Wire SDA to
+`GPIO21` and SCL to `GPIO19`; the firmware detects all INA236A and INA236B A0
+address combinations. The configured `20 mΩ` shunt and ±81.92 mV measurement
+range support approximately ±4.096 A. Current is positive when the load draws
+from INA236 `IN+` toward `IN-`.
+
+`GET /api/status` reports volts, amps, watts, and estimated percentage. Set the
+power source to `mains` to hide battery telemetry in companion apps. Hardware
+pins and measurement constants are in [board_config.h](include/board_config.h)
+and [snapclient_config.h](include/snapclient_config.h).
 
 ## Configuration files
 

@@ -32,10 +32,9 @@ static constexpr bool LOW_BATTERY_LED_ACTIVE_HIGH = false;
 static constexpr int MODE_STATUS_LED_PIN = WIFI_STATUS_LED_PIN;
 static constexpr bool MODE_STATUS_LED_ACTIVE_HIGH = WIFI_STATUS_LED_ACTIVE_HIGH;
 
-// 4S battery monitor input. Use ADC1-capable pins while Wi-Fi is active.
-// Good choices on classic ESP32 are GPIO34, GPIO35, GPIO36, and GPIO39.
-static constexpr bool BATTERY_SENSE_ENABLED = true;
-static constexpr int SENSE_PIN = 34;  // Battery divider output to ADC1 input
-static constexpr int BATTERY_SENSE_PIN = SENSE_PIN;
+// INA236 4S pack voltage/current/power monitor.
+static constexpr bool BATTERY_MONITOR_ENABLED = true;
+static constexpr int BATTERY_I2C_SDA_PIN = 21;
+static constexpr int BATTERY_I2C_SCL_PIN = 19;
 
 }  // namespace board_config
