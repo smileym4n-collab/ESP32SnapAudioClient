@@ -11,9 +11,9 @@ namespace board_config {
 //   PCM1808 LRCK -> ESP32 I2S_LRCK_IN
 //   ESP32 DATA   -> Zeppelin DSP input through a 22-47 ohm series resistor
 // Leave MCLK/SCKI disconnected from the ESP32.
-static constexpr int I2S_BCK_IN = -1;
-static constexpr int I2S_LRCK_IN = -1;
-static constexpr int I2S_DATA_OUT = -1;
+static constexpr int I2S_BCK_IN = 26;
+static constexpr int I2S_LRCK_IN = 25;
+static constexpr int I2S_DATA_OUT = 13;
 
 // Backward-compatible names for existing code/docs.
 static constexpr int I2S_BCLK_PIN = I2S_BCK_IN;

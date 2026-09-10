@@ -214,6 +214,10 @@ bool AudioOutputController::externalClockMissingRecently(uint32_t timeoutMs) con
   return i2sOut_.externalClockMissingRecently(timeoutMs);
 }
 
+void AudioOutputController::silenceIfIdle(uint32_t timeoutMs) {
+  i2sOut_.silenceIfIdle(timeoutMs);
+}
+
 void AudioOutputController::rampToMute(uint32_t durationMs) {
   beginGainRamp(0, durationMs);
 }

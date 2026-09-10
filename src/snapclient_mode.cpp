@@ -303,6 +303,7 @@ void SnapclientMode::loop() {
   }
 
   recoverFromOutputStall();
+  audioOutput_.silenceIfIdle(app_config::I2S_IDLE_SILENCE_TIMEOUT_MS);
   snapProcessor_->logRuntime();
 
   delay(app_config::MAIN_LOOP_DELAY_MS);

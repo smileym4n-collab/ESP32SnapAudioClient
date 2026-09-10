@@ -78,7 +78,8 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
   }
 
   bool isOutputTimedOut(uint32_t timeoutMs) const {
-    return p_snap_output != nullptr && p_snap_output->isStarted() &&
+    return playedChunkCount_ > 0 &&
+           p_snap_output != nullptr && p_snap_output->isStarted() &&
            !p_snap_output->isActive(timeoutMs);
   }
 

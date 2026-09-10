@@ -16,6 +16,7 @@ class AudioOutputController {
   void rampToFullScale(uint32_t durationMs);
   void muteForRestart(uint32_t durationMs);
   bool externalClockMissingRecently(uint32_t timeoutMs) const;
+  void silenceIfIdle(uint32_t timeoutMs);
 
   audio_tools::AudioStream &stream() { return i2sOut_; }
 

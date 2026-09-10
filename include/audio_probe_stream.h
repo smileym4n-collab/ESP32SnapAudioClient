@@ -42,9 +42,10 @@ class AudioProbeStream : public audio_tools::AudioStream {
   }
 
   void end() override {
-    if (target_ != nullptr) {
-      target_->end();
-    }
+    // AudioOutputController owns the shared I2S peripheral. Snapclient may end
+    // and rebuild its decoder chain between streams; closing the target here
+    // would leave GPIO DATA low because begin() intentionally does not reopen
+    // that shared peripheral.
   }
 
   void setAudioInfo(audio_tools::AudioInfo newInfo) override {

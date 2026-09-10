@@ -34,6 +34,7 @@ class ProjectSnapOutput : public snap_arduino::SnapOutput {
   audio_tools::AudioInfo fallbackInfo_;
   bool useResampler_ = true;
   bool allowBoost_ = true;
+  audio_tools::LinearVolumeControl linearVolumeControl_{false};
 
   audio_tools::AudioInfo sanitizeAudioInfo(audio_tools::AudioInfo info) const {
     if (info.sample_rate <= 0 || info.channels <= 0 ||
@@ -59,6 +60,13 @@ class ProjectSnapOutput : public snap_arduino::SnapOutput {
     vol_cfg.copyFrom(audio_info);
     vol_cfg.allow_boost = allowBoost_;
     vol_stream.begin(vol_cfg);
+    // VolumeStream normally selects a simulated logarithmic potentiometer
+    // curve when boost is disabled. Snapcast already supplies a normalized
+    // software-volume value, so use a bounded linear curve to avoid excessive
+    // attenuation and loss of PCM resolution below 100%.
+    if (!allowBoost_) {
+      vol_stream.setVolumeControl(linearVolumeControl_);
+    }
     vol_stream.setVolume(vol * vol_factor);
 
     if (useResampler_) {

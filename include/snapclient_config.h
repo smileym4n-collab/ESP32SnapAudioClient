@@ -129,18 +129,22 @@ static constexpr uint8_t I2S_SLOT_BITS = 32;
 static constexpr uint8_t I2S_OUTPUT_BYTES_PER_FRAME =
     (I2S_SLOT_BITS / 8) * AUDIO_CHANNELS;
 static constexpr uint32_t I2S_WRITE_TIMEOUT_MS = 20;
+// Opus supplies PCM in bursts, so hardware descriptor auto-clear cannot be
+// used with continuously running external clocks. Clear the DMA ring only
+// after a real gap in decoded PCM.
+static constexpr uint32_t I2S_IDLE_SILENCE_TIMEOUT_MS = 60;
 static constexpr uint8_t I2S_EVENT_QUEUE_LENGTH = 8;
 static constexpr uint32_t I2S_DIAGNOSTIC_LOG_INTERVAL_MS = 1000;
 // These are intentionally generous for the WROVER hardware and external-clock
 // output use. The goal here is stable playback rather than minimum latency.
-static constexpr uint8_t I2S_DMA_BUFFER_COUNT = 24;
+static constexpr uint8_t I2S_DMA_BUFFER_COUNT = 8;
 // Classic ESP32 I2S driver requires the DMA buffer size to stay within 8..1024.
-static constexpr uint16_t I2S_DMA_BUFFER_SIZE = 1024;
+static constexpr uint16_t I2S_DMA_BUFFER_SIZE = 256;
 // Bluetooth starts after the BT stack has allocated its task/heap, so keep its
 // I2S DMA footprint smaller than the Snapclient Wi-Fi path.
 static constexpr uint8_t BLUETOOTH_I2S_DMA_BUFFER_COUNT = 8;
 static constexpr uint16_t BLUETOOTH_I2S_DMA_BUFFER_SIZE = 512;
-static constexpr bool I2S_USE_AUDIO_PLL = false;
+static constexpr bool I2S_USE_AUDIO_PLL = true;
 static constexpr uint32_t AUDIO_UNMUTE_RAMP_MS = 35;
 static constexpr uint32_t AUDIO_MODE_CHANGE_MUTE_RAMP_MS = 35;
 

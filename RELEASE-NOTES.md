@@ -42,12 +42,12 @@ BCK, LRCK, or MCLK for the Zeppelin path.
 
 ## Required GPIO Setup
 
-Before flashing into the Zeppelin, edit [board_config.h](include/board_config.h):
+The Zeppelin I2S wiring is configured in [board_config.h](include/board_config.h):
 
-- `I2S_BCK_IN`: PCM1808 BCK input to the ESP32
-- `I2S_LRCK_IN`: PCM1808 LRCK/WS input to the ESP32
-- `I2S_DATA_OUT`: ESP32 DATA output to the Zeppelin DSP input through a 22-47 ohm
-  series resistor
+- `I2S_BCK_IN`: GPIO26, PCM1808 BCK input to the ESP32
+- `I2S_LRCK_IN`: GPIO25, PCM1808 LRCK/WS input to the ESP32
+- `I2S_DATA_OUT`: GPIO13, ESP32 DATA output to the Zeppelin DSP input through a
+  22-47 ohm series resistor
 
 The original PCM1808 DOUT signal must be physically disconnected from the
 Zeppelin DSP. Leave PCM1808 SCKI/MCLK disconnected from the ESP32.
@@ -91,7 +91,7 @@ pio run -e esp32-wrover-ie-n16r8
 The build uses PlatformIO's `default_16MB.csv` partition table, which provides two OTA app slots.
 
 - App slot size: `6553600` bytes
-- Built firmware image: `1998445` bytes
+- Built firmware image: `1999809` bytes
 
 ## Manual Test Checklist
 

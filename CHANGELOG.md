@@ -2,6 +2,42 @@
 
 ## [Unreleased]
 
+- Replaced descriptor auto-clear with a 60 ms decoded-PCM idle timeout: normal
+  Opus bursts remain queued for uninterrupted playback, while a genuine pause
+  explicitly clears stale DMA audio to silence.
+- Kept GPIO13 permanently attached to the documented I2S1 serial DATA signal
+  and removed the temporary GPIO27/internal-signal scan used during bring-up.
+- Made Snapcast software volume linear and bounded, avoiding the excessive
+  attenuation and loss of PCM resolution caused by the library's simulated
+  potentiometer curve below 100%.
+- Matched the classic ESP32 I2S DMA sample width to the Zeppelin's 32-bit slot
+  width, preventing stereo channel mis-striding and malformed sample levels
+  while retaining 24-bit-compatible, zero-padded Philips I2S output.
+- Raised the ESP32's internal-only I2S slave synchronizer clock to 24.576 MHz
+  (8x the Zeppelin's 3.072 MHz BCK) without adding an MCLK connection.
+- Locked external BCK and LRCK input polarity to standard Philips I2S after
+  diagnostics confirmed DATA output activity.
+- Resynchronized external-clock slave TX after the first real PCM reaches DMA,
+  so an already-running BCK/LRCK source cannot leave the serializer idle.
+- Assigned the Zeppelin I2S wiring to GPIO26 for external BCK, GPIO25 for
+  external LRCK/WS, and GPIO13 for DATA output.
+- Configured the external BCK/LRCK GPIOs explicitly as digital inputs before
+  installing the I2S slave driver.
+- Prevented output-stall recovery from firing before the first buffered audio
+  chunk has actually reached the output.
+- Kept the shared I2S peripheral active while Snapclient rebuilds its decoder
+  chain so stream lifecycle events cannot leave the DATA output held low.
+- Explicitly attached GPIO13 to the active ESP32 I2S serial-DATA matrix signal after
+  driver setup so generic GPIO direction handling cannot leave DATA held low.
+- Forced GPIO13 output-enable from the GPIO register while retaining the I2S
+  DATA matrix signal, avoiding a disabled pad in external-clock slave TX mode.
+- Moved the Zeppelin external-clock slave transmitter to the ESP32's second
+  hardware I2S controller after I2S0 remained low despite valid DMA audio.
+- Reduced the external-clock I2S DMA ring from 512 ms to about 43 ms and
+  explicitly bypassed the ESP32 PCM compander so queued music reaches the
+  serializer instead of leaving the DATA output at zero.
+- Programmed the ESP32 serializer for 24 valid sample bits while retaining
+  32-bit channel slots, matching the Zeppelin PCM1808/DSP wire format exactly.
 - Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
 
 ## [2.3.0] - 2026-07-13

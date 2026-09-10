@@ -41,9 +41,9 @@ All hardware assignments live in [board_config.h](include/board_config.h).
 
 | Function | GPIO | Notes |
 | --- | --- | --- |
-| I2S_BCK_IN | set in `board_config.h` | 3.072 MHz BCK from the Zeppelin PCM1808 |
-| I2S_LRCK_IN | set in `board_config.h` | 48 kHz LRCK/WS from the Zeppelin PCM1808 |
-| I2S_DATA_OUT | set in `board_config.h` | ESP32 DATA to Zeppelin DSP input through 22-47 ohm series resistor |
+| I2S_BCK_IN | `GPIO26` | 3.072 MHz BCK from the Zeppelin PCM1808 |
+| I2S_LRCK_IN | `GPIO25` | 48 kHz LRCK/WS from the Zeppelin PCM1808 |
+| I2S_DATA_OUT | `GPIO13` | ESP32 DATA to Zeppelin DSP input through 22-47 ohm series resistor |
 | Battery SENSE | `GPIO34` | 4S battery divider ADC input (ADC1) |
 | Mode button | `GPIO23` | Momentary, active-low, internal pull-up |
 | Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status, active-low common-anode |
