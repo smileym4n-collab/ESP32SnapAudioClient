@@ -2,8 +2,6 @@
 
 #include <string.h>
 
-#include <vector>
-
 #include <Arduino.h>
 
 #include "AudioTools.h"
@@ -34,7 +32,6 @@ class AudioProbeStream : public audio_tools::AudioStream {
   }
 
   bool begin() override {
-    processBuffer_.reserve(kProcessBufferReserveBytes);
     // The shared I2S output is started by AudioOutputController before
     // Snapclient begins. Re-opening it here can force a second DMA allocation
     // during codec-header handling and crash the ESP32 driver.
@@ -55,7 +52,11 @@ class AudioProbeStream : public audio_tools::AudioStream {
                   newInfo.bits_per_sample,
                   newInfo.channels);
     if (target_ != nullptr) {
-      target_->setAudioInfo(newInfo);
+      if (controller_ != nullptr) {
+        controller_->updateAudioFormat(newInfo.sample_rate, newInfo.channels, newInfo.bits_per_sample);
+      } else {
+        target_->setAudioInfo(newInfo);
+      }
       const audio_tools::AudioInfo applied = target_->audioInfo();
       Serial.printf("[i2s] format update=%ld Hz, %d-bit, %d ch\n",
                     static_cast<long>(applied.sample_rate),
@@ -95,50 +96,33 @@ class AudioProbeStream : public audio_tools::AudioStream {
       return 0;
     }
 
-    const app_config::ChannelMode channelMode =
-        controller_ != nullptr ? controller_->channelMode()
-                               : app_config::ChannelMode::Stereo;
-    const bool routeChannels =
-        channelMode != app_config::ChannelMode::Stereo &&
-        info.bits_per_sample == 16 && info.channels == 2 &&
-        len >= sizeof(int16_t) * 2;
+    if (controller_ == nullptr) return target_->write(data, len);
+    if (info.bits_per_sample != 16 || info.channels != 2 || len % 4) {
+      // Unsupported PCM cannot bypass the crossover.
+      return len;
+    }
+    const auto channelMode = controller_->channelMode();
     const float gain = effectiveGain();
-    const bool scaleSamples =
-        gain < 0.999f && info.bits_per_sample == 16 && len >= sizeof(int16_t);
-
-    const uint8_t *writeData = data;
-    size_t writeLen = len;
-    bool processBufferActive = routeChannels || scaleSamples;
-    if (processBufferActive) {
-      processBuffer_.resize(len);
-      if (routeChannels) {
-        app_config::routeStereo16(channelMode, data, len, processBuffer_.data());
-      } else {
-        memcpy(processBuffer_.data(), data, len);
-      }
+    int16_t routed[256];
+    size_t offset = 0;
+    while (offset < len) {
+      const size_t bytes = min(sizeof(routed), len-offset);
+      app_config::routeStereo16(channelMode, data+offset, bytes,
+                                reinterpret_cast<uint8_t *>(routed));
+      const size_t written = controller_->writeSelected(
+          reinterpret_cast<const uint8_t *>(routed), bytes, gain);
+      if (periodicStatsEnabled_) accumulate(reinterpret_cast<uint8_t *>(routed), written);
+      offset += written;
+      if (written != bytes) break;
     }
-
-    if (processBufferActive) {
-      if (scaleSamples) {
-        applyScalar(processBuffer_.data(), processBuffer_.size(), gain);
-      }
-      writeData = processBuffer_.data();
-      writeLen = processBuffer_.size();
-    }
-
-    const size_t written = target_->write(writeData, writeLen);
-    if (periodicStatsEnabled_) {
-      accumulate(writeData, written);
-    }
-    maybeLogFirstWrites(writeData, written);
+    maybeLogFirstWrites(data, offset);
     maybeLog();
-    return written;
+    return offset;
   }
 
  private:
   audio_tools::AudioStream *target_ = nullptr;
   AudioOutputController *controller_ = nullptr;
-  std::vector<uint8_t> processBuffer_;
   uint32_t windowStartMs_ = millis();
   uint32_t windowBytes_ = 0;
   uint16_t windowPeak_ = 0;
@@ -165,8 +149,6 @@ class AudioProbeStream : public audio_tools::AudioStream {
 
     return peak;
   }
-
-  static constexpr size_t kProcessBufferReserveBytes = 4096;
 
   void accumulate(const uint8_t *buffer, size_t size) {
     windowBytes_ += static_cast<uint32_t>(size);
@@ -220,20 +202,4 @@ class AudioProbeStream : public audio_tools::AudioStream {
     return gain;
   }
 
-  void applyScalar(uint8_t *buffer, size_t size, float gain) {
-    int16_t *samples = reinterpret_cast<int16_t *>(buffer);
-    const size_t sampleCount = size / sizeof(int16_t);
-
-    for (size_t i = 0; i < sampleCount; ++i) {
-      const float scaled = static_cast<float>(samples[i]) * gain;
-      if (scaled > 32767.0f) {
-        samples[i] = 32767;
-      } else if (scaled < -32768.0f) {
-        samples[i] = -32768;
-      } else {
-        samples[i] = static_cast<int16_t>(scaled);
-      }
-    }
-    // A trailing odd byte (not a full 16-bit sample) is left unchanged.
-  }
 };

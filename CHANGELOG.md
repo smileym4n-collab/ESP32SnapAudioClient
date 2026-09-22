@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+- Mapped the volume-pot wiper to ADC1 GPIO35. The pot now owns the common DSP master level; raw ADC endpoints remain provisional pending bench calibration.
+
+- Added throttled live `[dsp-pot]` serial output while the pot moves, reporting the GPIO35 raw ADC value, filtered value, calibrated position percentage and resulting master gain.
+
+- Added a concise EQ/DSP operator guide with the currently verified configuration, safe adjustment workflow, command examples, persistence behavior and DAC diagnostics.
+
+- Configured the PCM5122 clock tree explicitly for software-controlled three-wire I2S: BCK PLL reference, TI-recommended 44.1/48-kHz ratio-32 PLL values, and fixed DSP/DAC/charge-pump/OSR dividers. Extended `dsp dac` to read back the complete clock configuration.
+
+- Added `dsp dac` PCM5122 register readback so bench diagnostics verify bidirectional ESP32 communication and expose the DAC's clock, analogue-mute, XSMUTE, short-detect, boot and power states.
+
+- Fixed a Snapclient receive-task deadlock when Snapserver disconnects part-way through a message body. Incomplete messages now time out, close the stale socket and reconnect instead of leaving I2S clocking silence indefinitely.
+
+- Fixed false Snapclient output-stall resets during slow or interrupted Spotify stream startup by excluding intentional initial-buffer and rebuffer waits from stall recovery.
+
+- Enabled PCM5122 control on confirmed SDA GPIO21 / SCL GPIO22 at 7-bit address 0x4C (ADR1/ADR2 low). Disabled the unfitted INA236 and made the I2C pin-conflict check conditional on its enable setting. Added an acknowledged DAC initialization log.
+
+- Enabled local echo and send-on-Enter in the project serial monitor, with LF line endings and deasserted DTR/RTS, so DSP commands are visible while typing without holding the ESP32 in reset.
+
+- Fixed the bench DSP boot loop caused by internal-RAM exhaustion during Snapcast task creation: allocate delay/tone storage once in PSRAM, retain small DSP state internally, and force zero output if external allocation fails. Zero-delay programme playback avoids external sample-buffer accesses. Task stacks and DMA sizing are unchanged.
+
+- Added an intentionally unreleased Mission 730 bench DSP: runtime LR4 crossover, semantic HIGH/LOW mapping, six PEQs per driver, trims/mutes/polarity/delay, and a non-persistent source-clocked test tone.
+- Preserved Snapcast companion-app LEFT/RIGHT selection before the crossover; Bluetooth always averages L/R. Added fixed-block processing, safe coefficient publication and startup ramps at the shared I2S boundary.
+- Extended the existing serial dispatcher with `dsp` commands and explicit schema-versioned Preferences save; added disabled PCM5122 I2C/volume ADC placeholders, optional DAC mute and smoothed common master volume.
+- Added host DSP/control tests and `docs/speaker-dsp.md` with command reference, scope checks and hardware-validation limitations. VERSION remains 2.4.0 pending bench verification; no release/tag is prepared.
+
 - Updated repository agent instructions so future release-ready version bumps are committed, tagged, and pushed automatically after verification.
 
 ## [2.4.0] - 2026-07-22

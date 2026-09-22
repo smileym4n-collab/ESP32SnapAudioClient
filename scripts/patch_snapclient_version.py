@@ -14,6 +14,9 @@ def patch_snapclient_version(source=None, target=None, env=None):
     # The upstream Snapclient library hard-codes the hello version Snapserver sees.
     # It also writes a burst of silence on every server-settings update, because
     # settings handling calls setMute() even when only volume changed.
+    # Finally, its message-body reader waits forever if TCP closes after a header
+    # but before the advertised body is complete. Patch that wait so the normal
+    # fast-loop state machine can close the stale socket and reconnect.
     libdeps_dir = Path(env.subst("$PROJECT_LIBDEPS_DIR"))
     processor_path = (
         libdeps_dir
@@ -63,13 +66,46 @@ def patch_snapclient_version(source=None, target=None, env=None):
     elif new_settings not in patched:
         raise RuntimeError("Snapclient server settings volume block not found")
 
+    old_read_data = """    while (p_client->available() < base_message.size)
+      delay(10);
+    size = p_client->readBytes(&(send_receive_buffer[0]), base_message.size);
+    return true;
+"""
+    new_read_data = """    const uint32_t body_wait_started_ms = millis();
+    while (p_client->available() < base_message.size) {
+      const bool body_wait_timed_out =
+          (millis() - body_wait_started_ms) >=
+          (static_cast<uint32_t>(CONFIG_CLIENT_TIMEOUT_SEC) * 1000U);
+      if (!p_client->connected() || body_wait_timed_out) {
+        ESP_LOGW(TAG, "Incomplete message body: %d/%u bytes; reconnecting",
+                 p_client->available(),
+                 static_cast<unsigned>(base_message.size));
+        p_client->stop();
+        return false;
+      }
+      delay(10);
+    }
+    size = p_client->readBytes(&(send_receive_buffer[0]), base_message.size);
+    if (size != static_cast<int>(base_message.size)) {
+      ESP_LOGW(TAG, "Short message body: %d/%u bytes; reconnecting", size,
+               static_cast<unsigned>(base_message.size));
+      p_client->stop();
+      return false;
+    }
+    return true;
+"""
+    if old_read_data in patched:
+        patched = patched.replace(old_read_data, new_read_data, 1)
+    elif new_read_data not in patched:
+        raise RuntimeError("Snapclient message body wait block not found")
+
     if patched == text:
         return
 
     processor_path.write_text(patched, encoding="utf-8")
     print(
         f"[snapclient-version] patched Snapserver client version={version} "
-        "and volume-only mute handling"
+        "volume-only mute handling, and incomplete-message reconnect"
     )
 
 

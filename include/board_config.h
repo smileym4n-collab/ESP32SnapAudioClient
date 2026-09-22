@@ -11,6 +11,16 @@ static constexpr int I2S_DOUT_PIN = 13;   // I2S serial data output to DAC DIN
 // No MCLK line is used. PCM5102-style I2S DACs derive their internal clocks from
 // BCLK and do not need a separate master clock.
 
+// PCM5122 and volume-pot wiring confirmed for this PCB.
+static constexpr int PCM5122_I2C_SDA_PIN = 21;
+static constexpr int PCM5122_I2C_SCL_PIN = 22;
+static constexpr int VOLUME_ADC_PIN = 35;       // IO35, pot wiper (ADC1 input)
+static constexpr uint8_t PCM5122_I2C_ADDRESS = 0x4C;  // 7-bit address: ADR1=LOW, ADR2=LOW
+// Provisional raw 12-bit ADC endpoints; measure and edit for your pot/board.
+static constexpr int VOLUME_ADC_MIN = 0;
+static constexpr int VOLUME_ADC_MAX = 4095;
+static constexpr float VOLUME_MIN_DB = -60.0f;
+
 // Runtime mode-toggle button. Default wiring is a simple momentary switch to GND.
 // Cold boot always starts in Snapclient mode.
 // Pressing this button while the firmware is running toggles mode and reboots.
@@ -33,7 +43,7 @@ static constexpr int MODE_STATUS_LED_PIN = WIFI_STATUS_LED_PIN;
 static constexpr bool MODE_STATUS_LED_ACTIVE_HIGH = WIFI_STATUS_LED_ACTIVE_HIGH;
 
 // INA236 4S pack voltage/current/power monitor.
-static constexpr bool BATTERY_MONITOR_ENABLED = true;
+static constexpr bool BATTERY_MONITOR_ENABLED = false;  // INA236 not fitted; GPIO21 used by DAC
 static constexpr int BATTERY_I2C_SDA_PIN = 21;
 static constexpr int BATTERY_I2C_SCL_PIN = 19;
 

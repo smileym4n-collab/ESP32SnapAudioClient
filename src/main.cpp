@@ -27,6 +27,7 @@
 #include "AudioTools/AudioLibs/MemoryManager.h"
 
 #include "bluetooth_mode.h"
+#include "dsp_control.h"
 #include "boot_mode_selector.h"
 #include "board_config.h"
 #include "mode_led_controller.h"
@@ -72,6 +73,7 @@ void setup() {
   configurePsramAllocator();
 
   const auto selectedMode = detectOperatingMode();
+  dsp_control::begin(selectedMode == app_config::OperatingMode::Bluetooth);
   gActiveMode = selectedMode == app_config::OperatingMode::Snapclient
                     ? static_cast<RuntimeMode *>(&gSnapclientMode)
                     : static_cast<RuntimeMode *>(&gBluetoothMode);
@@ -109,6 +111,7 @@ void loop() {
   }
   gModeLed.update();
   gModeSwitch.update();
+  dsp_control::service();
 
   if (gActiveMode != nullptr) {
     gActiveMode->loop();

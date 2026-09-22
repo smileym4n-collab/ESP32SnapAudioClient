@@ -3,6 +3,7 @@
 #include <esp_system.h>
 
 #include "board_config.h"
+#include "dsp_control.h"
 #include "boot_mode_selector.h"
 
 namespace {
@@ -79,7 +80,31 @@ void ModeSwitchController::processSerialInput() {
       return;
     }
 
-    switch (static_cast<char>(value)) {
+    const char c = static_cast<char>(value);
+    // Extend the existing serial dispatcher: legacy one-key controls are only
+    // interpreted outside a DSP line, so "dsp low..." cannot trigger a reboot.
+    if (dspLineActive_) {
+      if (c == '\r' || c == '\n') {
+        dspLine_[dspLineLength_] = 0;
+        if (dspLineOverflow_) Serial.println("[dsp] line too long; discarded");
+        else dsp_control::command(dspLine_);
+        dspLineActive_ = false;
+        dspLineLength_ = 0;
+        dspLineOverflow_ = false;
+      } else if (c == '\b' || c == 127) {
+        if (dspLineLength_) --dspLineLength_;
+      } else if (dspLineLength_ < sizeof(dspLine_)-1) {
+        dspLine_[dspLineLength_++] = c;
+      } else dspLineOverflow_ = true;
+      continue;
+    }
+    if (c == 'd') {
+      dspLineActive_ = true;
+      dspLine_[0] = c;
+      dspLineLength_ = 1;
+      continue;
+    }
+    switch (c) {
       case 'b':
       case 'B':
         requestModeChange(app_config::OperatingMode::Bluetooth, "serial");
@@ -112,6 +137,7 @@ void ModeSwitchController::processSerialInput() {
 }
 
 void ModeSwitchController::printSerialHelp() const {
+  Serial.println("[serial] DSP commands: dsp help (newline terminated)");
   Serial.println("[serial] mode commands: 'b' -> Bluetooth, 's' -> Snapclient, 't' -> toggle, '?' -> help");
 }
 

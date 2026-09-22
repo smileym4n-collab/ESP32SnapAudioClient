@@ -1,5 +1,8 @@
 # ESP32 Audio Client
 
+
+> Unreleased working-tree addition: [EQ/DSP operator guide](docs/eq-dsp-operator-guide.md) and [Mission 730 active speaker DSP implementation notes](docs/speaker-dsp.md). Read the GPIO placeholders, changed physical HIGH/LOW outputs, command reference and scope procedure before using populated amplifiers. This bench implementation keeps `VERSION` at `2.4.0` pending hardware verification.
+
 Firmware that turns an **ESP32-WROVER** + external I2S DAC into a dual-mode audio
 receiver:
 
@@ -43,14 +46,16 @@ All hardware assignments live in [board_config.h](include/board_config.h).
 | I2S BCLK | `GPIO26` | External DAC bit clock |
 | I2S LRCLK / WS | `GPIO25` | External DAC word select |
 | I2S DOUT | `GPIO13` | External DAC serial data input |
-| INA236 SDA | `GPIO21` | I2C battery telemetry data |
-| INA236 SCL | `GPIO19` | I2C battery telemetry clock |
+| PCM5122 SDA | `GPIO21` | DAC control-bus data |
+| PCM5122 SCL | `GPIO22` | DAC control-bus clock |
+| Volume pot wiper | `GPIO35` | IO35, ADC1 input-only |
 | Mode button | `GPIO23` | Momentary, active-low, internal pull-up |
 | Wi-Fi LED | `GPIO32` | Snapclient/Wi-Fi status, active-low common-anode |
 | Bluetooth LED | `GPIO33` | Bluetooth status, active-low common-anode |
 | Low-battery LED | `GPIO14` | Red low-battery warning, active-low common-anode |
 
 No MCLK line is used — PCM5102-style DACs generate their own clocks from BCLK.
+The INA236 is not fitted on this PCB and its firmware support is disabled.
 If your LEDs are wired as GPIO → resistor → LED → GND instead of common-anode,
 flip the matching `*_ACTIVE_HIGH` flag in `board_config.h`.
 

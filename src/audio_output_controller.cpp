@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "board_config.h"
+#include "dsp_control.h"
 #include "snapclient_config.h"
 
 using namespace audio_tools;
@@ -88,7 +89,9 @@ bool AudioOutputController::begin(uint32_t sampleRate,
                 dmaBufferSize,
                 app_config::I2S_USE_AUDIO_PLL ? "on" : "off");
 
+  dsp_control::format(sampleRate, config_.channels, config_.bits_per_sample);
   const bool started = i2sOut_.begin(config_);
+  dsp_control::outputStarted(started);
   if (started) {
     rampToFullScale(app_config::AUDIO_UNMUTE_RAMP_MS);
   }
@@ -96,12 +99,13 @@ bool AudioOutputController::begin(uint32_t sampleRate,
 }
 
 void AudioOutputController::setChannelMode(app_config::ChannelMode mode) {
-  if (channelMode_ == mode) {
+  if (channelMode() == mode) {
     return;
   }
 
-  channelMode_ = mode;
-  Serial.printf("[channel] mode=%s\n", app_config::channelModeName(channelMode_));
+  channelMode_.store(mode, std::memory_order_relaxed);
+  dsp_control::routing(static_cast<unsigned>(mode));
+  Serial.printf("[channel] mode=%s\n", app_config::channelModeName(mode));
 }
 
 void AudioOutputController::updateAudioFormat(uint32_t sampleRate,
@@ -111,6 +115,12 @@ void AudioOutputController::updateAudioFormat(uint32_t sampleRate,
     return;
   }
 
+  dsp_control::format(sampleRate, channels, bitsPerSample);
+  // Unsupported formats must never pass unfiltered PCM to a tweeter.
+  if (channels != 2 || bitsPerSample != 16 || sampleRate < 32000 || sampleRate > 96000) return;
+  config_.sample_rate = sampleRate;
+  config_.channels = channels;
+  config_.bits_per_sample = bitsPerSample;
   AudioInfo info(sampleRate, channels, bitsPerSample);
   i2sOut_.setAudioInfo(info);
 
@@ -121,45 +131,31 @@ void AudioOutputController::updateAudioFormat(uint32_t sampleRate,
 }
 
 size_t AudioOutputController::write(const uint8_t *data, size_t length) {
-  if (channelMode_ == app_config::ChannelMode::Stereo ||
-      config_.channels != 2 ||
-      config_.bits_per_sample != 16) {
-    return writeRaw(data, length);
-  }
+  // Bluetooth entry. Deliberately independent of Snapcast's channel setting.
+  return writeSelected(data, length);
+}
 
-  constexpr size_t kRoutedSampleCount = 256;
-  int16_t routedSamples[kRoutedSampleCount];
-  constexpr size_t kRoutedFrameCount = kRoutedSampleCount / 2;
-  constexpr size_t kBytesPerFrame = sizeof(int16_t) * 2;
-
-  const int16_t *inputSamples = reinterpret_cast<const int16_t *>(data);
-  const size_t frameCount = length / kBytesPerFrame;
-  const size_t trailingBytes = length % kBytesPerFrame;
-  size_t totalWritten = 0;
-  size_t frameOffset = 0;
-
-  while (frameOffset < frameCount) {
-    const size_t framesThisPass = min(kRoutedFrameCount, frameCount - frameOffset);
-    for (size_t i = 0; i < framesThisPass; ++i) {
-      const size_t sourceIndex = (frameOffset + i) * 2;
-      const int16_t selectedSample =
-          channelMode_ == app_config::ChannelMode::Left
-              ? inputSamples[sourceIndex]
-              : inputSamples[sourceIndex + 1];
-      routedSamples[i * 2] = selectedSample;
-      routedSamples[(i * 2) + 1] = selectedSample;
+size_t AudioOutputController::writeSelected(const uint8_t *data, size_t length,
+                                            float safetyGain) {
+  if (!i2sOut_.isActive()) return length;
+  // Both existing sources deliver complete stereo16 frames. Reject malformed
+  // blocks instead of leaking an unprocessed tail into the HIGH DAC channel.
+  if (length % 4) return length;
+  constexpr size_t kFrames = 128;
+  int16_t processed[kFrames * 2];
+  size_t offset = 0;
+  while (offset < length) {
+    const size_t frames = min(kFrames, (length-offset)/4);
+    dsp_control::process(reinterpret_cast<const int16_t *>(data+offset), processed, frames);
+    // Existing Snapcast fixed trim / OTA fade also gate the injected test tone.
+    if (safetyGain < 1) {
+      for (size_t i = 0; i < frames*2; ++i) processed[i] = int16_t(processed[i]*safetyGain);
     }
-
-    totalWritten += writeRaw(reinterpret_cast<const uint8_t *>(routedSamples),
-                             framesThisPass * kBytesPerFrame);
-    frameOffset += framesThisPass;
+    const size_t written = writeRaw(reinterpret_cast<const uint8_t *>(processed), frames*4);
+    offset += written;
+    if (written != frames*4) break;
   }
-
-  if (trailingBytes > 0) {
-    totalWritten += writeRaw(data + (frameCount * kBytesPerFrame), trailingBytes);
-  }
-
-  return totalWritten;
+  return offset;
 }
 
 size_t AudioOutputController::writeRaw(const uint8_t *data, size_t length) {
@@ -220,6 +216,7 @@ void AudioOutputController::muteForRestart(uint32_t durationMs) {
   } while ((millis() - startMs) < durationMs);
 
   i2sOut_.flush();
+  dsp_control::stop();
 }
 
 void AudioOutputController::beginGainRamp(uint16_t targetGainQ15,

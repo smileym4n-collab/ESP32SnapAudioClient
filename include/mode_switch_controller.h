@@ -18,6 +18,10 @@ class ModeSwitchController {
 
   app_config::OperatingMode currentMode_ = app_config::OperatingMode::Snapclient;
   RuntimeMode *runtimeMode_ = nullptr;
+  char dspLine_[192] = {};
+  size_t dspLineLength_ = 0;
+  bool dspLineActive_ = false;
+  bool dspLineOverflow_ = false;
   bool buttonWasReleasedAfterBoot_ = false;
   bool pressHandled_ = false;
   uint32_t pressedSinceMs_ = 0;

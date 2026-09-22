@@ -385,6 +385,13 @@ void SnapclientMode::recoverFromOutputStall() {
     return;
   }
 
+  // An idle output is intentional while the initial activation threshold or
+  // rebuffer-resume threshold is being filled. Spotify can pause encoded input
+  // in either state for longer than the stall timeout during stream startup.
+  if (snapProcessor_->isWaitingForBuffer()) {
+    return;
+  }
+
   if (!snapProcessor_->hasBufferedAudio() &&
       !snapProcessor_->inputActiveRecently(
           app_config::SNAPCLIENT_INPUT_RECENT_TIMEOUT_MS)) {

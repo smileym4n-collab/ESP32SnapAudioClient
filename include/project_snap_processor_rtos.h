@@ -82,6 +82,12 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
            !p_snap_output->isActive(timeoutMs);
   }
 
+  // No output writes are expected until the activation threshold is reached,
+  // or while the consumer is deliberately waiting for the rebuffer-resume
+  // threshold. Treating either state as a stalled decoder makes short/slow
+  // stream starts (notably Spotify via Snapserver) reboot the ESP32.
+  bool isWaitingForBuffer() const { return !task_started || rebuffering_; }
+
   bool hasBufferedAudio() { return buffer.available() > 0; }
 
   bool inputActiveRecently(uint32_t timeoutMs) const {
@@ -207,7 +213,7 @@ class ProjectSnapProcessorRTOS : public snap_arduino::SnapProcessorRTOS {
   uint32_t lastSyncWaitLogMs_ = 0;
   bool periodicStatsEnabled_ = true;
   bool rebufferEnabled_ = true;
-  bool rebuffering_ = false;
+  volatile bool rebuffering_ = false;
   uint8_t rebufferStartPercent_ = 55;
   uint8_t rebufferResumePercent_ = 75;
 

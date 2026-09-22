@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include "AudioTools.h"
 #include "channel_mode.h"
 
@@ -9,8 +10,9 @@ class AudioOutputController {
   bool begin(uint32_t sampleRate, uint8_t dmaBufferCount, uint16_t dmaBufferSize);
   void updateAudioFormat(uint32_t sampleRate, uint8_t channels, uint8_t bitsPerSample);
   void setChannelMode(app_config::ChannelMode mode);
-  app_config::ChannelMode channelMode() const { return channelMode_; }
+  app_config::ChannelMode channelMode() const { return channelMode_.load(std::memory_order_relaxed); }
   size_t write(const uint8_t *data, size_t length);
+  size_t writeSelected(const uint8_t *data, size_t length, float safetyGain = 1.0f);
   void rampToMute(uint32_t durationMs);
   void rampToFullScale(uint32_t durationMs);
   void muteForRestart(uint32_t durationMs);
@@ -31,7 +33,7 @@ class AudioOutputController {
 
   audio_tools::I2SStream i2sOut_;
   audio_tools::I2SConfig config_;
-  app_config::ChannelMode channelMode_ = app_config::ChannelMode::Stereo;
+  std::atomic<app_config::ChannelMode> channelMode_{app_config::ChannelMode::Stereo};
   uint16_t gainStartQ15_ = 0;
   uint16_t gainCurrentQ15_ = 0;
   uint16_t gainTargetQ15_ = 32767;

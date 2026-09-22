@@ -26,9 +26,8 @@ bool BluetoothMode::begin() {
   bluetoothDeviceName_ = loadBluetoothNamePreference();
   Serial.printf("[bluetooth] device name=%s\n", bluetoothDeviceName_.c_str());
   Serial.println("[bluetooth] waiting for a source device...");
-  a2dpSink_.start(bluetoothDeviceName_.c_str());
-
   activeSampleRate_ = app_config::BLUETOOTH_DEFAULT_SAMPLE_RATE;
+  a2dpSink_.start(bluetoothDeviceName_.c_str());
   if (!audioOutput_.begin(activeSampleRate_,
                           app_config::BLUETOOTH_I2S_DMA_BUFFER_COUNT,
                           app_config::BLUETOOTH_I2S_DMA_BUFFER_SIZE)) {
